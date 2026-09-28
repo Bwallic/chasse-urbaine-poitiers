@@ -1,8 +1,7 @@
 window.CHASSE_CONFIG = {
-  // Passe à false lorsque Supabase est configuré.
-  DEMO_MODE: true,
-  SUPABASE_URL: "",
-  SUPABASE_ANON_KEY: "",
+  DEMO_MODE: false,
+  SUPABASE_URL: "https://loqeiqfwiajvzbuhmycr.supabase.co",
+  SUPABASE_ANON_KEY: "sb_publishable_DorbebSya0H6_HOChARyFg_efJ9fW2L",
   EVENT_ID: "11111111-1111-1111-1111-111111111111",
   EVENT_TIMEZONE: "Europe/Paris",
   EVENT_DATE: "2026-10-28",
