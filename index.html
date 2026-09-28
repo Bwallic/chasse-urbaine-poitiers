@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#090b0c" />
+  <title>Chasse Urbaine — Poitiers</title>
+  <link rel="preconnect" href="https://unpkg.com" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
+  <link rel="stylesheet" href="assets/styles.css" />
+</head>
+<body>
+  <div id="app">
+    <header class="topbar">
+      <div>
+        <div class="eyebrow">CHASSE URBAINE</div>
+        <h1>POITIERS</h1>
+      </div>
+      <div id="connectionBadge" class="badge badge-muted">Démo</div>
+    </header>
+
+    <main>
+      <section id="loginView" class="panel login-panel">
+        <h2>Accès à la partie</h2>
+        <p class="muted">Choisis ton rôle. En mode connecté, ton code personnel détermine ton identité et tes droits.</p>
+        <div class="role-grid">
+          <button class="role-card" data-role="target"><span class="role-dot target"></span><strong>Cible</strong><small>Envoyer un ping et voir les Cibles</small></button>
+          <button class="role-card" data-role="hunter"><span class="role-dot hunter"></span><strong>Chasseur</strong><small>Voir les derniers pings</small></button>
+          <button class="role-card" data-role="organizer"><span class="role-dot organizer"></span><strong>Organisateur</strong><small>Contrôle complet de la partie</small></button>
+        </div>
+
+        <div id="accessForm" class="access-form hidden">
+          <label id="demoPseudoWrap" class="field hidden">
+            <span>Pseudo</span>
+            <input id="demoPseudo" autocomplete="nickname" maxlength="32" placeholder="Ex. Willbac" />
+          </label>
+          <label id="accessCodeWrap" class="field">
+            <span>Code d'accès</span>
+            <input id="accessCode" autocomplete="one-time-code" maxlength="24" placeholder="Code personnel" />
+          </label>
+          <button id="joinButton" class="primary">Entrer dans la partie</button>
+          <button id="backButton" class="ghost">Retour</button>
+          <p id="loginError" class="error hidden"></p>
+        </div>
+      </section>
+
+      <section id="gameView" class="hidden game-shell">
+        <div class="toolbar panel">
+          <div>
+            <span id="roleLabel" class="eyebrow"></span>
+            <strong id="identityLabel">—</strong>
+          </div>
+          <div class="toolbar-actions">
+            <button id="centerMapBtn" class="ghost small">Recentrer</button>
+            <button id="logoutBtn" class="ghost small">Quitter</button>
+          </div>
+        </div>
+
+        <div id="map" aria-label="Carte de jeu"></div>
+
+        <section id="targetPanel" class="panel role-panel hidden">
+          <div class="panel-row">
+            <div>
+              <span class="eyebrow">PROCHAIN PING</span>
+              <div id="nextPingText" class="big-status">—</div>
+            </div>
+            <div id="pingStatusChip" class="badge badge-muted">En attente</div>
+          </div>
+          <button id="sendPingBtn" class="primary ping-button">ENVOYER MON PING</button>
+          <p id="geoMessage" class="muted compact">Le GPS n'est demandé qu'au moment où tu appuies sur le bouton.</p>
+          <div class="divider"></div>
+          <h3>Derniers pings des Cibles</h3>
+          <div id="targetPingList" class="list"></div>
+        </section>
+
+        <section id="hunterPanel" class="panel role-panel hidden">
+          <div class="panel-row">
+            <div>
+              <span class="eyebrow">RENSEIGNEMENT</span>
+              <div class="big-status">Derniers pings connus</div>
+            </div>
+            <div id="hunterFreshness" class="badge badge-muted">—</div>
+          </div>
+          <p class="muted compact">Les marqueurs restent figés jusqu'au prochain ping de chaque Cible.</p>
+          <div id="hunterPingList" class="list"></div>
+        </section>
+
+        <section id="organizerPanel" class="panel role-panel hidden">
+          <div class="panel-row">
+            <div>
+              <span class="eyebrow">CONTRÔLE</span>
+              <div class="big-status">Pings obligatoires</div>
+            </div>
+            <button id="refreshAdminBtn" class="ghost small">Actualiser</button>
+          </div>
+          <div id="adminMatrix" class="matrix-wrap"></div>
+          <div class="divider"></div>
+          <div class="panel-row extraction-control">
+            <div>
+              <span class="eyebrow">EXTRACTION</span>
+              <div id="activeZoneLabel" class="big-status">Aucune zone active</div>
+            </div>
+            <button id="drawZoneBtn" class="primary small">Tirer la zone</button>
+          </div>
+          <p class="muted compact">Le tirage est aléatoire et, en mode connecté, enregistré pour tous les joueurs.</p>
+        </section>
+      </section>
+    </main>
+
+    <footer>
+      <span>28 octobre · 20h00–22h00</span>
+      <span>La sécurité prime toujours sur le jeu.</span>
+    </footer>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="config.js"></script>
+  <script src="assets/app.js"></script>
+</body>
+</html>

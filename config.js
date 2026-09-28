@@ -1,0 +1,13 @@
+window.CHASSE_CONFIG = {
+  // Passe à false lorsque Supabase est configuré.
+  DEMO_MODE: true,
+  SUPABASE_URL: "",
+  SUPABASE_ANON_KEY: "",
+  EVENT_ID: "11111111-1111-1111-1111-111111111111",
+  EVENT_TIMEZONE: "Europe/Paris",
+  EVENT_DATE: "2026-10-28",
+  PING_TIMES: ["20:30", "21:00", "21:30"],
+  PING_TOLERANCE_SECONDS: 60,
+  MAP_CENTER: [46.58041, 0.33998],
+  MAP_ZOOM: 13
+};
