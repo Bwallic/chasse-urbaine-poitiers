@@ -5,7 +5,17 @@
   const originalTileLayer = L.tileLayer.bind(L);
   const originalGeoJSON = L.geoJSON.bind(L);
 
-  function gameStyle(feature, baseStyle = {}) {
+  function resolveStyle(styleSpec, feature) {
+    return typeof styleSpec === "function"
+      ? (styleSpec(feature) || {})
+      : (styleSpec || {});
+  }
+
+  function isActiveExtractionStyle(baseStyle = {}) {
+    return (baseStyle?.weight || 0) >= 4;
+  }
+
+  function gameStyle(feature, baseStyle = {}, hasActiveExtraction = false) {
     const p = feature?.properties || {};
 
     // Périmètre de jeu : rouge, pointillé, sans remplissage visible.
@@ -35,17 +45,34 @@
       };
     }
 
-    // Zones d'extraction : rouge pastel translucide.
+    // Zones d'extraction : toutes visibles avant le tirage.
+    // Dès qu'une zone devient active, les autres disparaissent visuellement.
     if (p.zone_type === "extraction") {
-      const active = (baseStyle?.weight || 0) >= 4;
+      const active = isActiveExtractionStyle(baseStyle);
+
+      if (hasActiveExtraction && !active) {
+        return {
+          ...baseStyle,
+          stroke: false,
+          fill: false,
+          weight: 0,
+          opacity: 0,
+          fillOpacity: 0,
+          interactive: false
+        };
+      }
+
       return {
         ...baseStyle,
-        color: active ? "#c93434" : "#d94a4a",
-        weight: active ? 5 : 3,
+        color: active ? "#b91c1c" : "#d94a4a",
+        weight: active ? 6 : 3,
         opacity: 1,
-        fillColor: active ? "#ff7f7f" : "#ff9a9a",
-        fillOpacity: active ? 0.42 : 0.30,
-        dashArray: null
+        fillColor: active ? "#ff6b6b" : "#ff9a9a",
+        fillOpacity: active ? 0.52 : 0.30,
+        dashArray: null,
+        stroke: true,
+        fill: true,
+        interactive: true
       };
     }
 
@@ -66,22 +93,28 @@
 
   L.geoJSON = function patchedGeoJSON(geojson, options = {}) {
     const requestedStyle = options.style;
+    const features = Array.isArray(geojson?.features) ? geojson.features : [];
 
-    const wrappedStyle = (feature) => {
-      const base = typeof requestedStyle === "function"
-        ? (requestedStyle(feature) || {})
-        : (requestedStyle || {});
-      return gameStyle(feature, base);
-    };
+    const initialHasActiveExtraction = features.some((feature) =>
+      feature?.properties?.zone_type === "extraction" &&
+      isActiveExtractionStyle(resolveStyle(requestedStyle, feature))
+    );
+
+    const wrappedStyle = (feature) =>
+      gameStyle(feature, resolveStyle(requestedStyle, feature), initialHasActiveExtraction);
 
     const layer = originalGeoJSON(geojson, { ...options, style: wrappedStyle });
     const originalSetStyle = layer.setStyle.bind(layer);
 
-    layer.setStyle = function patchedSetStyle(style) {
-      if (typeof style === "function") {
-        return originalSetStyle((feature) => gameStyle(feature, style(feature) || {}));
-      }
-      return originalSetStyle((feature) => gameStyle(feature, style || {}));
+    layer.setStyle = function patchedSetStyle(styleSpec) {
+      const hasActiveExtraction = features.some((feature) =>
+        feature?.properties?.zone_type === "extraction" &&
+        isActiveExtractionStyle(resolveStyle(styleSpec, feature))
+      );
+
+      return originalSetStyle((feature) =>
+        gameStyle(feature, resolveStyle(styleSpec, feature), hasActiveExtraction)
+      );
     };
 
     return layer;
@@ -91,6 +124,9 @@
   style.textContent = `
     .leaflet-tile.osm-dark-tiles {
       filter: brightness(0.72) contrast(1.12) saturate(0.55);
+    }
+    .leaflet-overlay-pane path {
+      transition: opacity .25s ease, fill-opacity .25s ease, stroke-width .25s ease;
     }
   `;
   document.head.appendChild(style);
