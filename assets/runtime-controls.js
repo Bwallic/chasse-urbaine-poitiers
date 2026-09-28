@@ -3,6 +3,7 @@
   if (!cfg || !window.supabase?.createClient) return;
 
   const originalCreateClient = window.supabase.createClient.bind(window.supabase);
+  let targetTiming = null;
 
   window.supabase.createClient = function patchedCreateClient(...args) {
     const client = originalCreateClient(...args);
@@ -41,12 +42,31 @@
     .runtime-controls .ghost {
       width: 100%;
     }
-    .runtime-status {
+    .runtime-status,
+    .ping-countdown {
       margin-top: 10px;
       padding: 10px 12px;
       border: 1px solid rgba(255,255,255,.12);
       border-radius: 10px;
       background: rgba(255,255,255,.035);
+    }
+    .ping-countdown {
+      margin: 10px 0 14px;
+    }
+    .ping-countdown-main {
+      font-size: 1.18rem;
+      font-weight: 800;
+      margin-top: 3px;
+    }
+    .ping-countdown.overdue {
+      border-color: rgba(255,86,86,.55);
+      background: rgba(255,86,86,.08);
+    }
+    .ping-countdown.overdue .ping-countdown-main {
+      color: #ff8f8f;
+    }
+    .ping-countdown.waiting .ping-countdown-main {
+      color: #ffd86b;
     }
     @media (max-width: 620px) {
       .runtime-controls { grid-template-columns: 1fr; }
@@ -62,6 +82,14 @@
       minute: "2-digit",
       second: "2-digit"
     }).format(new Date(value));
+  }
+
+  function formatDuration(ms) {
+    const total = Math.max(0, Math.floor(Math.abs(ms) / 1000));
+    const h = Math.floor(total / 3600);
+    const m = Math.floor((total % 3600) / 60);
+    const s = total % 60;
+    return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
   }
 
   function preparePseudoField() {
@@ -100,15 +128,19 @@
       return;
     }
 
+    const btn = document.getElementById("startEventBtn");
     if (data?.status === "live" && data.actual_started_at) {
       label.textContent = `Partie démarrée à ${formatClock(data.actual_started_at)} · fin prévue ${formatClock(data.actual_ends_at)}`;
-      const btn = document.getElementById("startEventBtn");
       if (btn) {
         btn.disabled = true;
         btn.textContent = "PARTIE DÉMARRÉE";
       }
     } else {
       label.textContent = "Partie en attente du départ";
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = "START — DÉMARRER MAINTENANT";
+      }
     }
   }
 
@@ -126,9 +158,11 @@
       <div class="runtime-status"><span id="eventRuntimeLabel" class="muted">Chargement…</span></div>
       <div class="runtime-controls">
         <button id="startEventBtn" class="primary">START — DÉMARRER MAINTENANT</button>
+        <button id="resetStartBtn" class="ghost">RESET START</button>
         <button id="resetExtractionBtn" class="ghost">RESET ZONE D'EXTRACTION</button>
+        <button id="resetPartyBtn" class="ghost">RESET PARTIE</button>
       </div>
-      <p class="muted compact">START enregistre l'heure réelle du départ, recale automatiquement les pings à +30 / +60 / +90 minutes et conserve une durée totale de 2 h. RESET efface uniquement la zone d'extraction active afin de permettre un nouveau tirage.</p>
+      <p class="muted compact">START enregistre l'heure réelle du départ et recale les pings à +30 / +60 / +90 minutes. RESET START remet seulement le départ à zéro. RESET PARTIE efface les pings de test, la zone active et le départ, mais conserve les participants, leurs pseudos et leurs codes.</p>
     `;
 
     const firstDivider = panel.querySelector(".divider");
@@ -157,6 +191,17 @@
       await refreshRuntimeStatus();
     });
 
+    document.getElementById("resetStartBtn").addEventListener("click", async () => {
+      if (!confirm("Réinitialiser uniquement le START ? Les pings déjà enregistrés seront conservés.")) return;
+      const client = window.CHASSE_LIVE_CLIENT;
+      if (!client) return alert("Connexion Supabase indisponible.");
+      const { error } = await client.rpc("reset_event_start");
+      if (error) return alert(error.message || "Impossible de réinitialiser le START.");
+      alert("START réinitialisé. Les horaires de ping sont revenus aux horaires théoriques.");
+      document.getElementById("refreshAdminBtn")?.click();
+      await refreshRuntimeStatus();
+    });
+
     document.getElementById("resetExtractionBtn").addEventListener("click", async () => {
       if (!confirm("Réinitialiser la zone d'extraction active ? Un nouveau tirage sera ensuite possible.")) return;
       const client = window.CHASSE_LIVE_CLIENT;
@@ -165,6 +210,17 @@
       const { error } = await client.rpc("reset_extraction_zone");
       if (error) return alert(error.message || "Impossible de réinitialiser la zone.");
 
+      document.getElementById("refreshAdminBtn")?.click();
+      await refreshRuntimeStatus();
+    });
+
+    document.getElementById("resetPartyBtn").addEventListener("click", async () => {
+      if (!confirm("RESET PARTIE : effacer tous les pings de test, la zone active et le START ? Les participants, pseudos et codes seront conservés.")) return;
+      const client = window.CHASSE_LIVE_CLIENT;
+      if (!client) return alert("Connexion Supabase indisponible.");
+      const { error } = await client.rpc("reset_party");
+      if (error) return alert(error.message || "Impossible de réinitialiser la partie.");
+      alert("Partie de test réinitialisée.");
       document.getElementById("refreshAdminBtn")?.click();
       await refreshRuntimeStatus();
     });
@@ -179,6 +235,112 @@
     });
   }
 
+  function injectTargetCountdown() {
+    const panel = document.getElementById("targetPanel");
+    if (!panel || document.getElementById("pingCountdownBox")) return;
+
+    const box = document.createElement("div");
+    box.id = "pingCountdownBox";
+    box.className = "ping-countdown waiting";
+    box.innerHTML = `
+      <span class="eyebrow">TEMPS AVANT LE PROCHAIN PING</span>
+      <div id="pingCountdownMain" class="ping-countdown-main">En attente du START</div>
+      <small id="pingCountdownSub" class="muted">Le compte à rebours commencera au lancement de la partie.</small>
+    `;
+
+    const sendButton = document.getElementById("sendPingBtn");
+    panel.insertBefore(box, sendButton);
+
+    const observer = new MutationObserver(() => {
+      if (!panel.classList.contains("hidden")) refreshTargetTiming();
+    });
+    observer.observe(panel, { attributes: true, attributeFilter: ["class"] });
+
+    sendButton?.addEventListener("click", () => {
+      setTimeout(refreshTargetTiming, 1200);
+      setTimeout(refreshTargetTiming, 3500);
+    });
+  }
+
+  async function refreshTargetTiming() {
+    const panel = document.getElementById("targetPanel");
+    const client = window.CHASSE_LIVE_CLIENT;
+    if (!panel || panel.classList.contains("hidden") || !client) return;
+
+    const { data, error } = await client.rpc("my_next_ping_status");
+    if (error) {
+      targetTiming = { error: error.message };
+      renderTargetCountdown();
+      return;
+    }
+
+    targetTiming = Array.isArray(data) ? data[0] : data;
+    renderTargetCountdown();
+  }
+
+  function renderTargetCountdown() {
+    const box = document.getElementById("pingCountdownBox");
+    const main = document.getElementById("pingCountdownMain");
+    const sub = document.getElementById("pingCountdownSub");
+    const button = document.getElementById("sendPingBtn");
+    if (!box || !main || !sub) return;
+
+    box.classList.remove("overdue", "waiting");
+
+    if (!targetTiming) {
+      box.classList.add("waiting");
+      main.textContent = "Chargement…";
+      sub.textContent = "Synchronisation avec la partie.";
+      return;
+    }
+
+    if (targetTiming.error) {
+      box.classList.add("waiting");
+      main.textContent = "État indisponible";
+      sub.textContent = targetTiming.error;
+      return;
+    }
+
+    if (targetTiming.event_status !== "live") {
+      box.classList.add("waiting");
+      main.textContent = "EN ATTENTE DU START";
+      sub.textContent = "Le compte à rebours commencera au lancement de la partie.";
+      if (button) button.disabled = true;
+      return;
+    }
+
+    if (targetTiming.all_sent) {
+      main.textContent = "TOUS LES PINGS ONT ÉTÉ ENVOYÉS";
+      sub.textContent = "Aucun autre ping obligatoire pour le moment.";
+      if (button) button.disabled = true;
+      return;
+    }
+
+    const due = new Date(targetTiming.scheduled_at).getTime();
+    const diff = due - Date.now();
+    if (diff >= 0) {
+      main.textContent = `DANS ${formatDuration(diff)}`;
+      sub.textContent = `Ping ${targetTiming.slot_label} prévu à ${formatClock(targetTiming.scheduled_at)}.`;
+      if (button) button.disabled = false;
+    } else {
+      box.classList.add("overdue");
+      main.textContent = `DÉPASSÉ DE ${formatDuration(diff)}`;
+      sub.textContent = `Le ping ${targetTiming.slot_label} devait être envoyé à ${formatClock(targetTiming.scheduled_at)}.`;
+      if (button) button.disabled = false;
+    }
+  }
+
   preparePseudoField();
   injectOrganizerControls();
+  injectTargetCountdown();
+
+  setInterval(() => {
+    const panel = document.getElementById("targetPanel");
+    if (panel && !panel.classList.contains("hidden")) renderTargetCountdown();
+  }, 1000);
+
+  setInterval(() => {
+    const panel = document.getElementById("targetPanel");
+    if (panel && !panel.classList.contains("hidden")) refreshTargetTiming();
+  }, 5000);
 })();
