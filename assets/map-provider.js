@@ -1,5 +1,5 @@
 (() => {
-  // Fond OpenStreetMap sans clé API + styles de jeu renforcés.
+  // Fond OpenStreetMap sans clé API + styles cartographiques du jeu.
   if (!window.L || !L.tileLayer || !L.geoJSON) return;
 
   const originalTileLayer = L.tileLayer.bind(L);
@@ -8,40 +8,44 @@
   function gameStyle(feature, baseStyle = {}) {
     const p = feature?.properties || {};
 
+    // Périmètre de jeu : rouge, pointillé, sans remplissage visible.
     if (p.zone_type === "perimeter") {
       return {
         ...baseStyle,
-        color: "#ff3b30",
-        weight: 4,
-        opacity: 0.98,
-        dashArray: null,
-        fillColor: "#ff3b30",
-        fillOpacity: 0.02
+        color: "#d94a4a",
+        weight: 3,
+        opacity: 1,
+        dashArray: "10 8",
+        lineCap: "round",
+        fillColor: "#d94a4a",
+        fillOpacity: 0
       };
     }
 
+    // Prison : jaune franc, contour et remplissage bien visibles.
     if (p.zone_type === "prison") {
       return {
         ...baseStyle,
-        color: "#ff453a",
+        color: "#e6b800",
         weight: 3,
         opacity: 1,
-        fillColor: "#ff453a",
-        fillOpacity: 0.22,
+        fillColor: "#ffe66d",
+        fillOpacity: 0.38,
         dashArray: null
       };
     }
 
+    // Zones d'extraction : rouge pastel translucide.
     if (p.zone_type === "extraction") {
       const active = (baseStyle?.weight || 0) >= 4;
       return {
         ...baseStyle,
-        color: "#6dff5f",
+        color: active ? "#c93434" : "#d94a4a",
         weight: active ? 5 : 3,
         opacity: 1,
-        fillColor: "#6dff5f",
-        fillOpacity: active ? 0.36 : 0.16,
-        dashArray: active ? null : "6 4"
+        fillColor: active ? "#ff7f7f" : "#ff9a9a",
+        fillOpacity: active ? 0.42 : 0.30,
+        dashArray: null
       };
     }
 
