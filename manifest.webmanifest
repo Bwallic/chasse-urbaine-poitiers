@@ -1,0 +1,19 @@
+{
+  "name": "Chasse Urbaine — Poitiers",
+  "short_name": "Chasse Urbaine",
+  "description": "Application de jeu pour Chasse Urbaine — Poitiers",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#090b0c",
+  "theme_color": "#090b0c",
+  "lang": "fr",
+  "icons": [
+    {
+      "src": "assets/app-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
