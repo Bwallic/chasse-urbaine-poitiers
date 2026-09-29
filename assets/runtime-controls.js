@@ -4,6 +4,7 @@
 
   const originalCreateClient = window.supabase.createClient.bind(window.supabase);
   let targetTiming = null;
+  let hunterTiming = null;
 
   window.supabase.createClient = function patchedCreateClient(...args) {
     const client = originalCreateClient(...args);
@@ -170,7 +171,7 @@
     else panel.appendChild(block);
 
     document.getElementById("startEventBtn").addEventListener("click", async () => {
-      if (!confirm("Démarrer la partie maintenant ? Les trois horaires de ping seront recalés à partir de cet instant.")) return;
+      if (!confirm("Démarrer la partie maintenant ? Les trois pings seront recalés à partir de cet instant.")) return;
       const client = window.CHASSE_LIVE_CLIENT;
       if (!client) return alert("Connexion Supabase indisponible.");
 
@@ -197,7 +198,7 @@
       if (!client) return alert("Connexion Supabase indisponible.");
       const { error } = await client.rpc("reset_event_start");
       if (error) return alert(error.message || "Impossible de réinitialiser le START.");
-      alert("START réinitialisé. Les horaires de ping sont revenus aux horaires théoriques.");
+      alert("START réinitialisé. Les pings sont revenus à leur planning théorique.");
       document.getElementById("refreshAdminBtn")?.click();
       await refreshRuntimeStatus();
     });
@@ -262,6 +263,29 @@
     });
   }
 
+  function injectHunterCountdown() {
+    const panel = document.getElementById("hunterPanel");
+    if (!panel || document.getElementById("hunterPingCountdownBox")) return;
+
+    const box = document.createElement("div");
+    box.id = "hunterPingCountdownBox";
+    box.className = "ping-countdown waiting";
+    box.innerHTML = `
+      <span class="eyebrow">TEMPS AVANT LE PROCHAIN PING</span>
+      <div id="hunterPingCountdownMain" class="ping-countdown-main">En attente du START</div>
+      <small id="hunterPingCountdownSub" class="muted">Le compte à rebours commencera au lancement de la partie.</small>
+    `;
+
+    const firstInfo = panel.querySelector("p.muted");
+    if (firstInfo) panel.insertBefore(box, firstInfo);
+    else panel.appendChild(box);
+
+    const observer = new MutationObserver(() => {
+      if (!panel.classList.contains("hidden")) refreshHunterTiming();
+    });
+    observer.observe(panel, { attributes: true, attributeFilter: ["class"] });
+  }
+
   async function refreshTargetTiming() {
     const panel = document.getElementById("targetPanel");
     const client = window.CHASSE_LIVE_CLIENT;
@@ -276,6 +300,22 @@
 
     targetTiming = Array.isArray(data) ? data[0] : data;
     renderTargetCountdown();
+  }
+
+  async function refreshHunterTiming() {
+    const panel = document.getElementById("hunterPanel");
+    const client = window.CHASSE_LIVE_CLIENT;
+    if (!panel || panel.classList.contains("hidden") || !client) return;
+
+    const { data, error } = await client.rpc("my_next_ping_status");
+    if (error) {
+      hunterTiming = { error: error.message };
+      renderHunterCountdown();
+      return;
+    }
+
+    hunterTiming = Array.isArray(data) ? data[0] : data;
+    renderHunterCountdown();
   }
 
   function renderTargetCountdown() {
@@ -320,27 +360,81 @@
     const diff = due - Date.now();
     if (diff >= 0) {
       main.textContent = `DANS ${formatDuration(diff)}`;
-      sub.textContent = `Ping ${targetTiming.slot_label} prévu à ${formatClock(targetTiming.scheduled_at)}.`;
+      sub.textContent = `${targetTiming.slot_label} prévu à ${formatClock(targetTiming.scheduled_at)}.`;
       if (button) button.disabled = false;
     } else {
       box.classList.add("overdue");
       main.textContent = `DÉPASSÉ DE ${formatDuration(diff)}`;
-      sub.textContent = `Le ping ${targetTiming.slot_label} devait être envoyé à ${formatClock(targetTiming.scheduled_at)}.`;
+      sub.textContent = `${targetTiming.slot_label} devait être envoyé à ${formatClock(targetTiming.scheduled_at)}.`;
       if (button) button.disabled = false;
+    }
+  }
+
+  function renderHunterCountdown() {
+    const box = document.getElementById("hunterPingCountdownBox");
+    const main = document.getElementById("hunterPingCountdownMain");
+    const sub = document.getElementById("hunterPingCountdownSub");
+    if (!box || !main || !sub) return;
+
+    box.classList.remove("overdue", "waiting");
+
+    if (!hunterTiming) {
+      box.classList.add("waiting");
+      main.textContent = "Chargement…";
+      sub.textContent = "Synchronisation avec la partie.";
+      return;
+    }
+
+    if (hunterTiming.error) {
+      box.classList.add("waiting");
+      main.textContent = "État indisponible";
+      sub.textContent = hunterTiming.error;
+      return;
+    }
+
+    if (hunterTiming.event_status !== "live") {
+      box.classList.add("waiting");
+      main.textContent = "EN ATTENTE DU START";
+      sub.textContent = "Le compte à rebours commencera au lancement de la partie.";
+      return;
+    }
+
+    if (hunterTiming.all_sent) {
+      main.textContent = "TOUS LES PINGS SONT PASSÉS";
+      sub.textContent = "Aucun autre ping prévu.";
+      return;
+    }
+
+    const due = new Date(hunterTiming.scheduled_at).getTime();
+    const diff = due - Date.now();
+    if (diff >= 0) {
+      main.textContent = `DANS ${formatDuration(diff)}`;
+      sub.textContent = `${hunterTiming.slot_label} prévu à ${formatClock(hunterTiming.scheduled_at)}.`;
+    } else {
+      box.classList.add("overdue");
+      main.textContent = `PING EN COURS · +${formatDuration(diff)}`;
+      sub.textContent = `Fenêtre du ${hunterTiming.slot_label} en cours.`;
     }
   }
 
   preparePseudoField();
   injectOrganizerControls();
   injectTargetCountdown();
+  injectHunterCountdown();
 
   setInterval(() => {
-    const panel = document.getElementById("targetPanel");
-    if (panel && !panel.classList.contains("hidden")) renderTargetCountdown();
+    const targetPanel = document.getElementById("targetPanel");
+    if (targetPanel && !targetPanel.classList.contains("hidden")) renderTargetCountdown();
+
+    const hunterPanel = document.getElementById("hunterPanel");
+    if (hunterPanel && !hunterPanel.classList.contains("hidden")) renderHunterCountdown();
   }, 1000);
 
   setInterval(() => {
-    const panel = document.getElementById("targetPanel");
-    if (panel && !panel.classList.contains("hidden")) refreshTargetTiming();
+    const targetPanel = document.getElementById("targetPanel");
+    if (targetPanel && !targetPanel.classList.contains("hidden")) refreshTargetTiming();
+
+    const hunterPanel = document.getElementById("hunterPanel");
+    if (hunterPanel && !hunterPanel.classList.contains("hidden")) refreshHunterTiming();
   }, 5000);
 })();
