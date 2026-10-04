@@ -15,6 +15,12 @@ Prototype V1 de l'application web mobile pour l'événement du 28 octobre 2026.
 - Contrôle automatique de la fenêtre ±60 secondes.
 - Realtime Supabase pour actualiser les pings et la zone active sur les autres téléphones.
 - Mode démo local pour tester l'interface sans backend.
+- Position personnelle en temps réel sur la carte pour Cibles et Chasseurs, uniquement en local sur leur appareil.
+- Timer général jusqu'à la fin de partie et fin automatique après les 2 heures, avec une courte grâce technique pour le Ping 6 final.
+- États Cible : libre, en cours de capture, en prison, puis libérée.
+- Gestion des joueurs directement depuis l'espace Organisateur : ajout, modification, rôle, activation, code et libération d'appareil.
+- Notification push à tous les joueurs lors du tirage de la zone d'extraction, avec le nom de la zone.
+- Interface joueur allégée pendant la partie.
 
 ## Structure
 
