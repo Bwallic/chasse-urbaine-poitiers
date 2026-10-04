@@ -211,13 +211,14 @@
       state.supabase.from("participants").select("id,event_id,pseudo,role,team,active").eq("event_id", cfg.EVENT_ID).eq("active", true),
       state.supabase.from("ping_slots").select("id,event_id,label,scheduled_at,ordinal").eq("event_id", cfg.EVENT_ID).order("ordinal"),
       state.supabase.from("pings").select("id,event_id,participant_id,slot_id,lat,lng,accuracy_m,sent_at,valid_window,delta_seconds").eq("event_id", cfg.EVENT_ID).order("sent_at"),
-      state.supabase.from("events").select("id,active_extraction_key,status").eq("id", cfg.EVENT_ID).single()
+      state.supabase.from("events").select("id,active_extraction_key,status,actual_started_at,actual_ends_at").eq("id", cfg.EVENT_ID).single()
     ]);
     for (const r of [partsRes, slotsRes, pingsRes, eventRes]) if (r.error) throw r.error;
     state.participants = partsRes.data || [];
     state.slots = slotsRes.data || [];
     state.pings = pingsRes.data || [];
     state.activeExtractionKey = eventRes.data?.active_extraction_key || null;
+    window.CHASSE_EVENT_STATE = eventRes.data || null;
   }
 
   function refreshDemo() {
