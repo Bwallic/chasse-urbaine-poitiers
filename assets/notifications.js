@@ -167,7 +167,7 @@
         button.textContent = "NOTIFICATIONS ACTIVES";
         button.disabled = true;
       } else {
-        status.textContent = "Active les notifications avant le START pour recevoir Ping 0, Ping 1, Ping 2 et Ping 3.";
+        status.textContent = "Active les notifications avant le START pour recevoir Ping 0 puis Ping 1 à Ping 6.";
         button.textContent = subscription ? "RÉACTIVER LES NOTIFICATIONS" : "ACTIVER LES NOTIFICATIONS";
         button.disabled = false;
       }
