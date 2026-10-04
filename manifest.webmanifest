@@ -1,7 +1,7 @@
 {
-  "name": "Chasse Urbaine — Poitiers",
-  "short_name": "Chasse Urbaine",
-  "description": "Application de jeu pour Chasse Urbaine — Poitiers",
+  "name": "Évasion Urbaine — Poitiers",
+  "short_name": "Évasion Urbaine",
+  "description": "Application de jeu pour Évasion Urbaine — Poitiers",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
