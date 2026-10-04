@@ -10,6 +10,8 @@
   let stateRefreshBusy = false;
   let managerRefreshBusy = false;
   let initialSetupDone = false;
+  let targetStateSnapshot = null;
+  let targetCountdownTriggered = false;
   const hunterPingLayers = new Map();
 
   const style = document.createElement("style");
@@ -394,13 +396,19 @@
         <button class="ghost small" data-target-state="prisoner">EN PRISON</button>
         <button class="ghost small" data-target-state="free">LIBÉRÉE / LIBRE</button>
       </div>
-      <small class="muted">Cet état est visible par l'Organisateur. Les pings continuent normalement.</small>
+      <div id="targetCaptureCountdown" class="runtime-status hidden">
+        <span class="eyebrow">TEMPS AVANT LIBÉRATION</span>
+        <div id="targetCaptureCountdownMain" class="big-status">15:00</div>
+        <small class="muted">Chrono privé : visible uniquement par la Cible.</small>
+      </div>
+      <small class="muted">Les Chasseurs voient votre état. Les pings continuent normalement.</small>
     `;
     const divider = panel.querySelector(".divider");
     if (divider) panel.insertBefore(block,divider); else panel.appendChild(block);
 
     block.querySelectorAll("[data-target-state]").forEach((button) => {
       button.addEventListener("click", async () => {
+        if (targetStateSnapshot?.play_state === button.dataset.targetState) return;
         button.disabled = true;
         try {
           const { error } = await client().rpc("set_my_target_state",{p_state:button.dataset.targetState});
@@ -462,12 +470,43 @@
     if (error) return;
     const row = Array.isArray(data) ? data[0] : data;
     if (!row) return;
+    targetStateSnapshot = row;
+    if (row.play_state !== "capturing") targetCountdownTriggered = false;
     const labels = {free:"Libre",capturing:"En cours de capture",prisoner:"En prison"};
     const label = document.getElementById("targetStateLabel");
     if (label) label.textContent = labels[row.play_state] || row.play_state;
     document.querySelectorAll("[data-target-state]").forEach((button) => {
       button.classList.toggle("active-state",button.dataset.targetState === row.play_state);
     });
+  }
+
+  function renderTargetCaptureCountdown() {
+    const box = document.getElementById("targetCaptureCountdown");
+    const main = document.getElementById("targetCaptureCountdownMain");
+    if (!box || !main) return;
+
+    if (!targetStateSnapshot || targetStateSnapshot.play_state !== "capturing" || !targetStateSnapshot.updated_at) {
+      box.classList.add("hidden");
+      return;
+    }
+
+    box.classList.remove("hidden");
+    const endAt = new Date(targetStateSnapshot.updated_at).getTime() + 15 * 60 * 1000;
+    const remaining = endAt - Date.now();
+
+    if (remaining > 0) {
+      const total = Math.ceil(remaining / 1000);
+      const min = Math.floor(total / 60);
+      const sec = total % 60;
+      main.textContent = String(min).padStart(2,"0") + ":" + String(sec).padStart(2,"0");
+      return;
+    }
+
+    main.textContent = "00:00";
+    if (!targetCountdownTriggered) {
+      targetCountdownTriggered = true;
+      document.querySelector('[data-target-state="free"]')?.click();
+    }
   }
 
   function injectOrganizerManager() {
@@ -657,7 +696,7 @@
   });
 
   setInterval(setup,1000);
-  setInterval(() => { renderGlobalTimer(); renderHunterDepartureTimer(); },1000);
+  setInterval(() => { renderGlobalTimer(); renderHunterDepartureTimer(); renderTargetCaptureCountdown(); },1000);
   setInterval(refreshEventState,5000);
   setInterval(() => {
     if (participant?.role === "target") refreshTargetState();
