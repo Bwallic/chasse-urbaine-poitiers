@@ -242,10 +242,33 @@
     if (stateRefreshBusy || !participant || !client()) return;
     stateRefreshBusy = true;
     try {
-      const { data, error } = await client().rpc("sync_my_event_state");
-      if (error) return;
-      eventState = Array.isArray(data) ? data[0] : data;
-      renderGlobalTimer();
+      const cached = window.CHASSE_EVENT_STATE;
+      if (cached?.status) {
+        eventState = cached;
+        renderGlobalTimer();
+        renderHunterDepartureTimer();
+      }
+
+      const { data, error } = await client()
+        .from("events")
+        .select("status,actual_started_at,actual_ends_at")
+        .eq("id", cfg.EVENT_ID)
+        .single();
+
+      if (!error && data) {
+        eventState = data;
+        window.CHASSE_EVENT_STATE = { ...(window.CHASSE_EVENT_STATE || {}), ...data };
+        renderGlobalTimer();
+        renderHunterDepartureTimer();
+        return;
+      }
+
+      const fallback = await client().rpc("sync_my_event_state");
+      if (!fallback.error && fallback.data) {
+        eventState = Array.isArray(fallback.data) ? fallback.data[0] : fallback.data;
+        renderGlobalTimer();
+        renderHunterDepartureTimer();
+      }
     } finally { stateRefreshBusy = false; }
   }
 
@@ -692,11 +715,24 @@
     }
   }
 
-  window.addEventListener("evasion:event-updated", () => {
+  window.addEventListener("evasion:event-updated", (event) => {
+    if (event?.detail?.status) {
+      eventState = {
+        status: event.detail.status,
+        actual_started_at: event.detail.actual_started_at,
+        actual_ends_at: event.detail.actual_ends_at
+      };
+      window.CHASSE_EVENT_STATE = { ...(window.CHASSE_EVENT_STATE || {}), ...eventState };
+      renderGlobalTimer();
+      renderHunterDepartureTimer();
+    }
     refreshEventState();
-    renderGlobalTimer();
-    renderHunterDepartureTimer();
   });
+
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) refreshEventState();
+  });
+  window.addEventListener("focus", refreshEventState);
 
   setInterval(setup,1000);
   setInterval(() => { renderGlobalTimer(); renderHunterDepartureTimer(); renderTargetCaptureCountdown(); },1000);
