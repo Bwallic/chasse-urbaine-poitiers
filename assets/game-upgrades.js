@@ -147,21 +147,30 @@
     const sub = document.getElementById("hunterDepartureTimerSub");
     if (!main || !sub) return;
 
+    const pingBtn = document.getElementById("sendHunterPingBtn");
+
     if (!eventState || !eventState.actual_started_at || eventState.status === "scheduled") {
       main.textContent = "EN ATTENTE DU START";
       sub.textContent = "Départ autorisé 10 minutes après le START.";
+      if (pingBtn) pingBtn.disabled = true;
       return;
     }
 
     const departureAt = new Date(eventState.actual_started_at).getTime() + 10 * 60 * 1000;
     const diff = departureAt - Date.now();
 
-    if (diff > 0) {
+    if (eventState.status === "finished") {
+      main.textContent = "PARTIE TERMINÉE";
+      sub.textContent = "Les pings Chasseur sont désactivés.";
+      if (pingBtn) pingBtn.disabled = true;
+    } else if (diff > 0) {
       main.textContent = formatDuration(diff);
       sub.textContent = "Temps restant avant le départ des Chasseurs.";
+      if (pingBtn) pingBtn.disabled = true;
     } else {
       main.textContent = "DÉPART AUTORISÉ";
       sub.textContent = "La chasse est ouverte.";
+      if (pingBtn) pingBtn.disabled = false;
     }
   }
 
