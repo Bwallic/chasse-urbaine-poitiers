@@ -9,6 +9,8 @@
   let watchId = null;
   let stateRefreshBusy = false;
   let managerRefreshBusy = false;
+  let managerActiveRole = "target";
+  let managerRows = [];
   let initialSetupDone = false;
   let targetStateSnapshot = null;
   let targetCountdownTriggered = false;
@@ -80,7 +82,49 @@
       grid-template-columns: minmax(0,1fr) minmax(120px,.7fr) minmax(0,1fr) auto;
       align-items: end; margin-top: 10px;
     }
-    .organizer-player-manager .player-manager-list { display: grid; gap: 10px; margin-top: 14px; }
+    .organizer-player-manager .manager-tabs {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0,1fr));
+      gap: 7px;
+      margin-top: 14px;
+      padding: 4px;
+      border: 1px solid rgba(255,255,255,.09);
+      border-radius: 10px;
+      background: rgba(0,0,0,.16);
+    }
+    .organizer-player-manager .manager-tab {
+      min-width: 0;
+      padding: 9px 8px;
+      border-radius: 8px;
+      font-size: .78rem;
+      font-weight: 800;
+      letter-spacing: .04em;
+      white-space: nowrap;
+    }
+    .organizer-player-manager .manager-tab.active {
+      background: rgba(255,255,255,.12);
+      border-color: rgba(255,255,255,.24);
+    }
+    .organizer-player-manager .manager-tab-count {
+      display: inline-flex;
+      min-width: 20px;
+      height: 20px;
+      padding: 0 5px;
+      margin-left: 5px;
+      align-items: center;
+      justify-content: center;
+      border-radius: 999px;
+      background: rgba(255,255,255,.08);
+      font-size: .72rem;
+    }
+    .organizer-player-manager .manager-role-heading {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      align-items: center;
+      margin-top: 12px;
+    }
+    .organizer-player-manager .player-manager-list { display: grid; gap: 10px; margin-top: 8px; }
     .organizer-player-manager .player-editor {
       padding: 10px; border: 1px solid rgba(255,255,255,.09); border-radius: 9px;
       background: rgba(255,255,255,.025);
@@ -98,6 +142,7 @@
     @media (max-width: 720px) {
       .organizer-player-manager .manager-form, .organizer-player-manager .player-editor { grid-template-columns: 1fr; }
       .player-code-row, .player-editor-meta { grid-column: 1; }
+      .organizer-player-manager .manager-tab { font-size: .72rem; padding: 9px 5px; }
     }
   `;
   document.head.appendChild(style);
@@ -535,6 +580,114 @@
     }
   }
 
+  function managerRoleLabel(role) {
+    return role === "target" ? "Cibles" : role === "hunter" ? "Chasseurs" : "Organisateurs";
+  }
+
+  function updateManagerTabs() {
+    document.querySelectorAll("[data-manager-tab]").forEach((button) => {
+      const role = button.dataset.managerTab;
+      button.classList.toggle("active", role === managerActiveRole);
+      const count = managerRows.filter((row) => row.role === role).length;
+      const counter = button.querySelector(".manager-tab-count");
+      if (counter) counter.textContent = count;
+    });
+
+    const roleSelect = document.getElementById("managerNewRole");
+    if (roleSelect && roleSelect.value !== managerActiveRole) roleSelect.value = managerActiveRole;
+
+    const heading = document.getElementById("managerRoleHeadingText");
+    if (heading) heading.textContent = managerRoleLabel(managerActiveRole);
+  }
+
+  function bindPlayerEditor(editor) {
+    const id = editor.dataset.playerId;
+    const pseudoInput = editor.querySelector('[data-field="pseudo"]');
+    const roleInput = editor.querySelector('[data-field="role"]');
+    const activeInput = editor.querySelector('[data-field="active"]');
+    const codeInput = editor.querySelector('[data-field="code"]');
+
+    editor.querySelector('[data-action="generate"]')?.addEventListener("click",() => {
+      codeInput.value = suggestCode(pseudoInput.value,roleInput.value);
+    });
+
+    editor.querySelector('[data-action="save"]')?.addEventListener("click",async (event) => {
+      const btn = event.currentTarget; btn.disabled = true;
+      try {
+        const { error } = await client().rpc("organizer_update_player",{
+          p_participant_id:id,p_pseudo:pseudoInput.value.trim(),p_role:roleInput.value,
+          p_team:null,p_active:activeInput.checked,p_new_code:codeInput.value.trim()||null
+        });
+        if (error) throw error;
+        document.getElementById("playerManagerMessage").textContent = codeInput.value.trim()
+          ? `${pseudoInput.value.trim()} mis à jour. Nouveau code : ${codeInput.value.trim().toUpperCase()}.`
+          : `${pseudoInput.value.trim()} mis à jour.`;
+        managerActiveRole = roleInput.value;
+        await refreshPlayerManager();
+      } catch (e) {
+        document.getElementById("playerManagerMessage").textContent = e.message || "Modification impossible.";
+      } finally { btn.disabled = false; }
+    });
+
+    editor.querySelector('[data-action="release"]')?.addEventListener("click",async (event) => {
+      if (!confirm("Libérer l'appareil associé à ce joueur ? Son code pourra être réutilisé sur un autre appareil.")) return;
+      const btn = event.currentTarget; btn.disabled = true;
+      try {
+        const { error } = await client().rpc("organizer_release_player",{p_participant_id:id});
+        if (error) throw error;
+        document.getElementById("playerManagerMessage").textContent = "Appareil libéré.";
+        await refreshPlayerManager();
+      } catch (e) {
+        document.getElementById("playerManagerMessage").textContent = e.message || "Impossible de libérer l'appareil.";
+      } finally { btn.disabled = false; }
+    });
+  }
+
+  function renderPlayerManagerList() {
+    const list = document.getElementById("playerManagerList");
+    if (!list) return;
+
+    updateManagerTabs();
+    const rows = managerRows.filter((row) => row.role === managerActiveRole);
+
+    if (!rows.length) {
+      list.innerHTML = `<div class="muted compact">Aucun ${managerActiveRole === "target" ? "Cible" : managerActiveRole === "hunter" ? "Chasseur" : "Organisateur"} enregistré.</div>`;
+      return;
+    }
+
+    list.innerHTML = rows.map((row) => {
+      const stateLabel = row.role === "target" ? ({free:"Libre",capturing:"Capture",prisoner:"Prison"}[row.play_state] || row.play_state) : "—";
+      return `
+        <div class="player-editor" data-player-id="${row.id}">
+          <label>Pseudo<input data-field="pseudo" maxlength="24" value="${escapeHtml(row.pseudo)}" /></label>
+          <label>Rôle<select data-field="role" ${row.is_self ? "disabled" : ""}>
+            <option value="target" ${row.role==="target"?"selected":""}>Cible</option>
+            <option value="hunter" ${row.role==="hunter"?"selected":""}>Chasseur</option>
+            <option value="organizer" ${row.role==="organizer"?"selected":""}>Organisateur</option>
+          </select></label>
+          <label>Actif<input data-field="active" type="checkbox" ${row.active?"checked":""} ${row.is_self?"disabled":""} /></label>
+          <div class="player-code-row">
+            <label>Remplacer le code<input data-field="code" maxlength="24" placeholder="Code enregistré · laisser vide pour conserver" /></label>
+            <button class="ghost small" data-action="generate">GÉNÉRER</button>
+          </div>
+          <div class="player-editor-meta">
+            <span class="badge ${row.active?"badge-green":"badge-muted"}">${row.active?"ACTIF":"INACTIF"}</span>
+            <span class="badge ${row.device_linked?"badge-green":"badge-muted"}">${row.device_linked?"APPAREIL LIÉ":"APPAREIL LIBRE"}</span>
+            <span class="badge badge-muted">CODE ENREGISTRÉ</span>
+            ${row.role==="target" ? `<span class="badge badge-muted">État : ${escapeHtml(stateLabel)}</span>` : ""}
+            ${row.is_self ? '<span class="badge badge-muted">TON ACCÈS</span>' : ""}
+          </div>
+          <div class="player-editor-actions">
+            <button class="primary small" data-action="save">ENREGISTRER</button>
+            <button class="ghost small" data-action="release" ${row.is_self||!row.device_linked?"disabled":""}>LIBÉRER APPAREIL</button>
+          </div>
+        </div>
+      `;
+    }).join("");
+
+    list.querySelectorAll(".player-editor").forEach(bindPlayerEditor);
+  }
+
   function injectOrganizerManager() {
     const panel = document.getElementById("organizerPanel");
     if (!panel || document.getElementById("organizerPlayerManager")) return;
@@ -546,7 +699,14 @@
       <div class="divider"></div>
       <span class="eyebrow">GESTION DES JOUEURS</span>
       <div class="big-status">Joueurs et codes</div>
-      <p class="muted compact">Ajoute, modifie ou désactive un joueur, change son rôle ou son code et libère son appareil.</p>
+      <p class="muted compact">Les joueurs sont regroupés par rôle. Sélectionne un onglet pour gérer uniquement le groupe concerné.</p>
+
+      <div class="manager-tabs" role="tablist" aria-label="Rôles des joueurs">
+        <button class="ghost manager-tab active" data-manager-tab="target" role="tab">CIBLES <span class="manager-tab-count">0</span></button>
+        <button class="ghost manager-tab" data-manager-tab="hunter" role="tab">CHASSEURS <span class="manager-tab-count">0</span></button>
+        <button class="ghost manager-tab" data-manager-tab="organizer" role="tab">ORGA <span class="manager-tab-count">0</span></button>
+      </div>
+
       <div class="manager-form">
         <label>Pseudo<input id="managerNewPseudo" maxlength="24" placeholder="Nouveau joueur" /></label>
         <label>Rôle<select id="managerNewRole">
@@ -560,6 +720,10 @@
         <button id="managerRefreshPlayers" class="ghost small">ACTUALISER</button>
       </div>
       <div id="playerManagerMessage" class="muted compact"></div>
+      <div class="manager-role-heading">
+        <strong id="managerRoleHeadingText">Cibles</strong>
+        <small class="muted">Modification des accès existants</small>
+      </div>
       <div id="playerManagerList" class="player-manager-list"></div>
     `;
     panel.appendChild(block);
@@ -568,6 +732,17 @@
     const role = document.getElementById("managerNewRole");
     const code = document.getElementById("managerNewCode");
 
+    block.querySelectorAll("[data-manager-tab]").forEach((button) => {
+      button.addEventListener("click", () => {
+        managerActiveRole = button.dataset.managerTab;
+        role.value = managerActiveRole;
+        if (!code.value.trim() || /^[IHO]-/.test(code.value.trim().toUpperCase())) {
+          code.value = pseudo.value.trim() ? suggestCode(pseudo.value, managerActiveRole) : "";
+        }
+        renderPlayerManagerList();
+      });
+    });
+
     document.getElementById("managerGenerateNewCode")?.addEventListener("click",() => {
       code.value = suggestCode(pseudo.value,role.value);
     });
@@ -575,9 +750,11 @@
       if (!code.value.trim()) code.value = suggestCode(pseudo.value,role.value);
     });
     role?.addEventListener("change",() => {
+      managerActiveRole = role.value;
       if (!code.value.trim() || /^[IHO]-/.test(code.value.trim().toUpperCase())) {
         code.value = suggestCode(pseudo.value,role.value);
       }
+      renderPlayerManagerList();
     });
 
     document.getElementById("managerAddPlayer")?.addEventListener("click",async () => {
@@ -590,6 +767,7 @@
         });
         if (error) throw error;
         message.textContent = `${pseudo.value.trim()} ajouté avec le code ${code.value.trim().toUpperCase()}.`;
+        managerActiveRole = role.value;
         pseudo.value = ""; code.value = "";
         await refreshPlayerManager();
       } catch (e) {
@@ -598,6 +776,7 @@
     });
 
     document.getElementById("managerRefreshPlayers")?.addEventListener("click",refreshPlayerManager);
+    updateManagerTabs();
   }
 
   async function refreshPlayerManager() {
@@ -608,78 +787,8 @@
     try {
       const { data, error } = await client().rpc("organizer_manage_list");
       if (error) throw error;
-      const rows = data || [];
-
-      list.innerHTML = rows.map((row) => {
-        const stateLabel = row.role === "target" ? ({free:"Libre",capturing:"Capture",prisoner:"Prison"}[row.play_state] || row.play_state) : "—";
-        return `
-          <div class="player-editor" data-player-id="${row.id}">
-            <label>Pseudo<input data-field="pseudo" maxlength="24" value="${escapeHtml(row.pseudo)}" /></label>
-            <label>Rôle<select data-field="role" ${row.is_self ? "disabled" : ""}>
-              <option value="target" ${row.role==="target"?"selected":""}>Cible</option>
-              <option value="hunter" ${row.role==="hunter"?"selected":""}>Chasseur</option>
-              <option value="organizer" ${row.role==="organizer"?"selected":""}>Organisateur</option>
-            </select></label>
-            <label>Actif<input data-field="active" type="checkbox" ${row.active?"checked":""} ${row.is_self?"disabled":""} /></label>
-            <div class="player-code-row">
-              <label>Nouveau code (laisser vide = inchangé)<input data-field="code" maxlength="24" placeholder="Code inchangé" /></label>
-              <button class="ghost small" data-action="generate">GÉNÉRER</button>
-            </div>
-            <div class="player-editor-meta">
-              <span class="badge ${row.active?"badge-green":"badge-muted"}">${row.active?"ACTIF":"INACTIF"}</span>
-              <span class="badge ${row.device_linked?"badge-green":"badge-muted"}">${row.device_linked?"APPAREIL LIÉ":"APPAREIL LIBRE"}</span>
-              ${row.role==="target" ? `<span class="badge badge-muted">État : ${escapeHtml(stateLabel)}</span>` : ""}
-              ${row.is_self ? '<span class="badge badge-muted">TON ACCÈS</span>' : ""}
-            </div>
-            <div class="player-editor-actions">
-              <button class="primary small" data-action="save">ENREGISTRER</button>
-              <button class="ghost small" data-action="release" ${row.is_self||!row.device_linked?"disabled":""}>LIBÉRER APPAREIL</button>
-            </div>
-          </div>
-        `;
-      }).join("");
-
-      list.querySelectorAll(".player-editor").forEach((editor) => {
-        const id = editor.dataset.playerId;
-        const pseudoInput = editor.querySelector('[data-field="pseudo"]');
-        const roleInput = editor.querySelector('[data-field="role"]');
-        const activeInput = editor.querySelector('[data-field="active"]');
-        const codeInput = editor.querySelector('[data-field="code"]');
-
-        editor.querySelector('[data-action="generate"]')?.addEventListener("click",() => {
-          codeInput.value = suggestCode(pseudoInput.value,roleInput.value);
-        });
-
-        editor.querySelector('[data-action="save"]')?.addEventListener("click",async (event) => {
-          const btn = event.currentTarget; btn.disabled = true;
-          try {
-            const { error } = await client().rpc("organizer_update_player",{
-              p_participant_id:id,p_pseudo:pseudoInput.value.trim(),p_role:roleInput.value,
-              p_team:null,p_active:activeInput.checked,p_new_code:codeInput.value.trim()||null
-            });
-            if (error) throw error;
-            document.getElementById("playerManagerMessage").textContent = codeInput.value.trim()
-              ? `${pseudoInput.value.trim()} mis à jour. Nouveau code : ${codeInput.value.trim().toUpperCase()}.`
-              : `${pseudoInput.value.trim()} mis à jour.`;
-            await refreshPlayerManager();
-          } catch (e) {
-            document.getElementById("playerManagerMessage").textContent = e.message || "Modification impossible.";
-          } finally { btn.disabled = false; }
-        });
-
-        editor.querySelector('[data-action="release"]')?.addEventListener("click",async (event) => {
-          if (!confirm("Libérer l'appareil associé à ce joueur ? Son code pourra être réutilisé sur un autre appareil.")) return;
-          const btn = event.currentTarget; btn.disabled = true;
-          try {
-            const { error } = await client().rpc("organizer_release_player",{p_participant_id:id});
-            if (error) throw error;
-            document.getElementById("playerManagerMessage").textContent = "Appareil libéré.";
-            await refreshPlayerManager();
-          } catch (e) {
-            document.getElementById("playerManagerMessage").textContent = e.message || "Impossible de libérer l'appareil.";
-          } finally { btn.disabled = false; }
-        });
-      });
+      managerRows = data || [];
+      renderPlayerManagerList();
     } catch (e) {
       list.innerHTML = `<span class="muted">${escapeHtml(e.message || "Liste indisponible.")}</span>`;
     } finally { managerRefreshBusy = false; }
