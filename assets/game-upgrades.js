@@ -32,6 +32,24 @@
       display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px;
     }
     .target-state-actions button.active-state { outline: 2px solid rgba(255,255,255,.55); outline-offset: 1px; }
+    .target-state-visibility {
+      margin: 10px 0 14px;
+      padding: 12px;
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: 10px;
+      background: rgba(255,255,255,.035);
+    }
+    .target-state-visibility-list { display: grid; gap: 7px; margin-top: 8px; }
+    .target-state-visibility-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: center;
+      padding: 7px 9px;
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: 8px;
+    }
+
     .self-position-dot {
       width: 18px; height: 18px; border-radius: 50%; background: #58a6ff;
       border: 3px solid #fff; box-shadow: 0 0 0 5px rgba(88,166,255,.22);
@@ -226,6 +244,49 @@
     });
   }
 
+
+  function injectVisibleTargetStates(panelId, role) {
+    const panel = document.getElementById(panelId);
+    if (!panel || document.getElementById(role + "VisibleTargetStates")) return;
+    const box = document.createElement("div");
+    box.id = role + "VisibleTargetStates";
+    box.className = "target-state-visibility";
+    box.innerHTML =
+      '<span class="eyebrow">' + (role === "hunter" ? "ÉTAT DES CIBLES" : "CIBLES EN PRISON") + '</span>' +
+      '<div id="' + role + 'VisibleTargetStatesList" class="target-state-visibility-list"><span class="muted">Chargement…</span></div>';
+    const anchor = panel.querySelector(".divider") || panel.firstElementChild;
+    if (anchor) panel.insertBefore(box, anchor);
+    else panel.appendChild(box);
+  }
+
+  async function refreshVisibleTargetStates() {
+    if (!participant || !["target","hunter"].includes(participant.role) || !client()) return;
+    const role = participant.role;
+    const list = document.getElementById(role + "VisibleTargetStatesList");
+    if (!list) return;
+
+    const { data, error } = await client().rpc("visible_target_states");
+    if (error) {
+      list.innerHTML = '<span class="muted">' + escapeHtml(error.message || "États indisponibles.") + '</span>';
+      return;
+    }
+
+    const rows = data || [];
+    if (!rows.length) {
+      list.innerHTML = role === "hunter"
+        ? '<span class="muted">Aucune Cible active.</span>'
+        : '<span class="muted">Aucune Cible en prison.</span>';
+      return;
+    }
+
+    const labels = { free:"Libre", capturing:"En cours de capture", prisoner:"En prison" };
+    list.innerHTML = rows.map((row) =>
+      '<div class="target-state-visibility-row"><strong>' + escapeHtml(row.pseudo) + '</strong>' +
+      '<span class="badge ' + (row.play_state === "prisoner" ? "badge-amber" : row.play_state === "free" ? "badge-green" : "badge-muted") + '">' +
+      escapeHtml(labels[row.play_state] || row.play_state) + '</span></div>'
+    ).join("");
+  }
+
   async function refreshTargetState() {
     if (!participant || participant.role !== "target" || !client()) return;
     const { data, error } = await client().rpc("my_target_state");
@@ -398,9 +459,11 @@
     if (participant.role === "target") {
       injectTimer("targetPanel","target");
       injectTargetState();
+      injectVisibleTargetStates("targetPanel","target");
       startOwnPosition();
     } else if (participant.role === "hunter") {
       injectTimer("hunterPanel","hunter");
+      injectVisibleTargetStates("hunterPanel","hunter");
       startOwnPosition();
     } else if (participant.role === "organizer") {
       injectOrganizerManager();
@@ -410,6 +473,7 @@
       initialSetupDone = true;
       refreshEventState();
       if (participant.role === "target") refreshTargetState();
+      if (["target","hunter"].includes(participant.role)) refreshVisibleTargetStates();
       if (participant.role === "organizer") refreshPlayerManager();
     }
   }
@@ -419,6 +483,7 @@
   setInterval(refreshEventState,5000);
   setInterval(() => {
     if (participant?.role === "target") refreshTargetState();
+    if (["target","hunter"].includes(participant?.role)) refreshVisibleTargetStates();
     if (participant?.role === "organizer") refreshPlayerManager();
-  },10000);
+  },5000);
 })();
