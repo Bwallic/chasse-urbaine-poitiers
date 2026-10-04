@@ -107,6 +107,46 @@
     return `${rolePrefix(role)}-${core}`;
   }
 
+
+  function injectHunterDepartureTimer() {
+    const panel = document.getElementById("hunterPanel");
+    if (!panel || document.getElementById("hunterDepartureTimer")) return;
+    const box = document.createElement("div");
+    box.id = "hunterDepartureTimer";
+    box.className = "global-game-timer";
+    box.innerHTML =
+      '<span class="eyebrow">DÉPART DES CHASSEURS</span>' +
+      '<div id="hunterDepartureTimerMain" class="global-game-timer-main">En attente du START</div>' +
+      '<small id="hunterDepartureTimerSub" class="muted">Départ autorisé 10 minutes après le START.</small>';
+    const anchor = panel.querySelector(".ping-countdown") || panel.firstElementChild;
+    if (anchor) panel.insertBefore(box, anchor);
+    else panel.appendChild(box);
+  }
+
+  function renderHunterDepartureTimer() {
+    if (!participant || participant.role !== "hunter") return;
+    const main = document.getElementById("hunterDepartureTimerMain");
+    const sub = document.getElementById("hunterDepartureTimerSub");
+    if (!main || !sub) return;
+
+    if (!eventState || !eventState.actual_started_at || eventState.status === "scheduled") {
+      main.textContent = "EN ATTENTE DU START";
+      sub.textContent = "Départ autorisé 10 minutes après le START.";
+      return;
+    }
+
+    const departureAt = new Date(eventState.actual_started_at).getTime() + 10 * 60 * 1000;
+    const diff = departureAt - Date.now();
+
+    if (diff > 0) {
+      main.textContent = formatDuration(diff);
+      sub.textContent = "Temps restant avant le départ des Chasseurs.";
+    } else {
+      main.textContent = "DÉPART AUTORISÉ";
+      sub.textContent = "La chasse est ouverte.";
+    }
+  }
+
   function injectTimer(panelId, prefix) {
     const panel = document.getElementById(panelId);
     if (!panel || document.getElementById(`${prefix}GlobalGameTimer`)) return;
@@ -150,7 +190,7 @@
     const remaining = new Date(eventState.actual_ends_at).getTime() - Date.now();
     if (remaining <= 0) {
       main.textContent = "00:00:00";
-      sub.textContent = "Fin de partie · Ping 6 final encore disponible pendant 60 secondes.";
+      sub.textContent = "Fin de partie · Ping 12 final encore disponible pendant 60 secondes.";
       showFinishedBanner();
     } else {
       main.textContent = formatDuration(remaining);
@@ -463,6 +503,7 @@
       startOwnPosition();
     } else if (participant.role === "hunter") {
       injectTimer("hunterPanel","hunter");
+      injectHunterDepartureTimer();
       injectVisibleTargetStates("hunterPanel","hunter");
       startOwnPosition();
     } else if (participant.role === "organizer") {
@@ -479,7 +520,7 @@
   }
 
   setInterval(setup,1000);
-  setInterval(renderGlobalTimer,1000);
+  setInterval(() => { renderGlobalTimer(); renderHunterDepartureTimer(); },1000);
   setInterval(refreshEventState,5000);
   setInterval(() => {
     if (participant?.role === "target") refreshTargetState();
