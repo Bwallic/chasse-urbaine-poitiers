@@ -9,7 +9,7 @@ Prototype V1 de l'application web mobile pour l'événement du 28 octobre 2026.
 - Trois rôles : Cible, Chasseur, Organisateur.
 - Cible : envoi volontaire d'un ping GPS, associé au pseudo, et affichage des derniers pings des Cibles.
 - Chasseur : affichage centralisé du dernier ping connu de chaque Cible.
-- Organisateur : matrice de contrôle des pings 20:30 / 21:00 / 21:30 et tirage aléatoire de la zone d'extraction.
+- Organisateur : matrice de contrôle de Ping 0 puis des pings à +20 / +40 / +60 minutes et tirage aléatoire de la zone d'extraction.
 - Conservation de l'historique des pings côté Supabase.
 - Heure du ping calculée côté serveur dans la version connectée.
 - Contrôle automatique de la fenêtre ±60 secondes.
@@ -72,11 +72,11 @@ Les vrais codes doivent rester dans Supabase. Ne pas committer un fichier conten
 
 ## Logique des pings
 
-La base associe automatiquement le premier ping d'une Cible au créneau 20:30, le second à 21:00 et le troisième à 21:30. `sent_at` vient de l'horloge du serveur. Un ping est valide si son écart au créneau est inférieur ou égal à 60 secondes. Les pings hors fenêtre sont conservés et signalés à l'organisateur.
+La base utilise un Ping 0 au START, puis Ping 1 à +20 minutes, Ping 2 à +40 minutes et Ping 3 à +60 minutes. `sent_at` vient de l'horloge du serveur. Un ping est valide si son écart au créneau est inférieur ou égal à 60 secondes. Les pings hors fenêtre sont conservés et signalés à l'organisateur.
 
 ## Zone d'extraction
 
-Les cinq zones sont visibles dès le départ. L'organisateur utilise « Tirer la zone » à 21:30. Le serveur choisit aléatoirement une zone et la conserve : un second clic renvoie la même zone au lieu d'en tirer une nouvelle.
+Les cinq zones sont visibles dès le départ. L'organisateur utilise « Tirer la zone » au moment prévu par les règles de la partie. Le serveur choisit aléatoirement une zone et la conserve : un second clic renvoie la même zone au lieu d'en tirer une nouvelle.
 
 ## Plan B recommandé
 
