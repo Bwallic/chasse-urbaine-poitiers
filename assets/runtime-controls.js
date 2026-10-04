@@ -163,7 +163,7 @@
         <button id="resetExtractionBtn" class="ghost">RESET ZONE D'EXTRACTION</button>
         <button id="resetPartyBtn" class="ghost">RESET PARTIE</button>
       </div>
-      <p class="muted compact">START enregistre l'heure réelle du départ et recale les pings à +20 / +40 / +60 minutes. RESET START remet seulement le départ à zéro. RESET PARTIE efface les pings de test, la zone active et le départ, mais conserve les participants, leurs pseudos et leurs codes.</p>
+      <p class="muted compact">START enregistre l'heure réelle du départ et recale les pings toutes les 20 minutes pendant 2 heures : +20 / +40 / +60 / +80 / +100 / +120 minutes. RESET START remet seulement le départ à zéro. RESET PARTIE efface les pings de test, la zone active et le départ, mais conserve les participants, leurs pseudos et leurs codes.</p>
     `;
 
     const firstDivider = panel.querySelector(".divider");
@@ -171,7 +171,7 @@
     else panel.appendChild(block);
 
     document.getElementById("startEventBtn").addEventListener("click", async () => {
-      if (!confirm("Démarrer la partie maintenant ? Les trois pings seront recalés à partir de cet instant.")) return;
+      if (!confirm("Démarrer la partie maintenant ? Les six pings seront recalés toutes les 20 minutes à partir de cet instant.")) return;
       const client = window.CHASSE_LIVE_CLIENT;
       if (!client) return alert("Connexion Supabase indisponible.");
 
