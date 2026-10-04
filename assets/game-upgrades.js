@@ -9,6 +9,7 @@
   let watchId = null;
   let stateRefreshBusy = false;
   let managerRefreshBusy = false;
+  let initialSetupDone = false;
 
   const style = document.createElement("style");
   style.textContent = `
@@ -131,7 +132,8 @@
     const remaining = new Date(eventState.actual_ends_at).getTime() - Date.now();
     if (remaining <= 0) {
       main.textContent = "00:00:00";
-      sub.textContent = "Fin en cours de validation…";
+      sub.textContent = "Fin de partie · Ping 6 final encore disponible pendant 60 secondes.";
+      showFinishedBanner();
     } else {
       main.textContent = formatDuration(remaining);
       sub.textContent = "Temps restant avant la fin du jeu.";
@@ -396,16 +398,20 @@
     if (participant.role === "target") {
       injectTimer("targetPanel","target");
       injectTargetState();
-      refreshTargetState();
       startOwnPosition();
     } else if (participant.role === "hunter") {
       injectTimer("hunterPanel","hunter");
       startOwnPosition();
     } else if (participant.role === "organizer") {
       injectOrganizerManager();
-      refreshPlayerManager();
     }
-    refreshEventState();
+
+    if (!initialSetupDone) {
+      initialSetupDone = true;
+      refreshEventState();
+      if (participant.role === "target") refreshTargetState();
+      if (participant.role === "organizer") refreshPlayerManager();
+    }
   }
 
   setInterval(setup,1000);
