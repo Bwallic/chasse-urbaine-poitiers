@@ -190,7 +190,7 @@ begin
   set status = 'finished'
   where status = 'live'
     and actual_ends_at is not null
-    and actual_ends_at <= clock_timestamp();
+    and actual_ends_at + interval '60 seconds' <= clock_timestamp();
 
   get diagnostics v_count = row_count;
   return v_count;
@@ -212,7 +212,7 @@ begin
   set status = 'finished'
   where id = v_event and status = 'live'
     and actual_ends_at is not null
-    and actual_ends_at <= clock_timestamp();
+    and actual_ends_at + interval '60 seconds' <= clock_timestamp();
 
   return query
   select e.status, e.actual_started_at, e.actual_ends_at
