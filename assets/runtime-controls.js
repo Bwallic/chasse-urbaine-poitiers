@@ -341,6 +341,13 @@
       return;
     }
 
+    if (targetTiming.event_status === "finished") {
+      main.textContent = "PARTIE TERMINÉE";
+      sub.textContent = "Aucun autre ping à envoyer.";
+      if (button) button.disabled = true;
+      return;
+    }
+
     if (targetTiming.event_status !== "live") {
       box.classList.add("waiting");
       main.textContent = "EN ATTENTE DU START";
@@ -389,6 +396,12 @@
       box.classList.add("waiting");
       main.textContent = "État indisponible";
       sub.textContent = hunterTiming.error;
+      return;
+    }
+
+    if (hunterTiming.event_status === "finished") {
+      main.textContent = "PARTIE TERMINÉE";
+      sub.textContent = "Aucun autre ping prévu.";
       return;
     }
 
