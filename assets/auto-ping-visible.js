@@ -1,5 +1,6 @@
 (() => {
   let attemptedSlotId = null;
+  let attemptedAt = 0;
   let checkInFlight = false;
 
   function targetPanelIsActive() {
@@ -32,9 +33,10 @@
       // au moment du ping. Après 55 s, on laisse la notification / le bouton
       // manuel prendre le relais afin de ne pas envoyer hors fenêtre.
       if (lateness < 0 || lateness > 55000) return;
-      if (attemptedSlotId === row.slot_id) return;
+      if (attemptedSlotId === row.slot_id && Date.now() - attemptedAt < 10000) return;
 
       attemptedSlotId = row.slot_id;
+      attemptedAt = Date.now();
       button.click();
     } finally {
       checkInFlight = false;
@@ -53,5 +55,5 @@
 
   setInterval(() => {
     maybeSendAutomaticPing().catch(() => {});
-  }, 1000);
+  }, 5000);
 })();
