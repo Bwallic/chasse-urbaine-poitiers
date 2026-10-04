@@ -76,6 +76,19 @@ create table if not exists public.hunter_pings (
 );
 
 create index if not exists hunter_pings_event_sent_idx on public.hunter_pings(event_id, sent_at desc);
+create table if not exists public.hunter_required_pings (
+  id uuid primary key default gen_random_uuid(),
+  event_id uuid not null references public.events(id) on delete cascade,
+  participant_id uuid not null references public.participants(id) on delete cascade,
+  lat double precision not null check (lat between -90 and 90),
+  lng double precision not null check (lng between -180 and 180),
+  accuracy_m double precision,
+  sent_at timestamptz not null default now(),
+  unique(event_id, participant_id)
+);
+
+create index if not exists hunter_required_pings_event_idx on public.hunter_required_pings(event_id, sent_at desc);
+
 
 create index if not exists pings_event_idx on public.pings(event_id, sent_at desc);
 create index if not exists participants_event_idx on public.participants(event_id, role);
@@ -264,6 +277,7 @@ alter table public.access_codes enable row level security;
 alter table public.ping_slots enable row level security;
 alter table public.pings enable row level security;
 alter table public.hunter_pings enable row level security;
+alter table public.hunter_required_pings enable row level security;
 
 drop policy if exists "event members read event" on public.events;
 create policy "event members read event" on public.events for select to authenticated
