@@ -131,6 +131,7 @@
       }
       if (participant.role !== state.selectedRole) throw new Error(`Ce code correspond au rôle ${roleNames[participant.role] || participant.role}.`);
       state.participant = participant;
+      window.CHASSE_PARTICIPANT = participant;
       await enterGame();
     } catch (e) {
       showError(e.message || "Impossible d'entrer dans la partie.");
@@ -156,6 +157,7 @@
 
   async function initMap() {
     state.map = L.map("map", { zoomControl: true, attributionControl: true }).setView(cfg.MAP_CENTER, cfg.MAP_ZOOM);
+    window.CHASSE_MAP = state.map;
     L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
       maxZoom: 20,
       attribution: '&copy; OpenStreetMap contributors &copy; CARTO'
