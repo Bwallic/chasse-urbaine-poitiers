@@ -318,7 +318,9 @@
 
   if (supportsPush()) getRegistration().catch(() => {});
 
-  setInterval(() => {
+  function refreshVisibleNotificationUI() {
+    if (document.hidden) return;
+
     const target = document.getElementById("targetPanel");
     if (target && !target.classList.contains("hidden")) refreshNotificationStatus("target");
 
@@ -327,7 +329,13 @@
 
     refreshOrganizerStartCheck();
     handleNotificationAction().catch(() => {});
-  }, 3000);
+  }
 
-  setInterval(() => handleNotificationAction().catch(() => {}), 400);
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) refreshVisibleNotificationUI();
+  });
+  window.addEventListener("focus", refreshVisibleNotificationUI);
+
+  refreshVisibleNotificationUI();
+  setInterval(refreshVisibleNotificationUI, 10000);
 })();
