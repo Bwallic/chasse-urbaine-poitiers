@@ -4,7 +4,7 @@
 insert into public.events (id, name, starts_at, ends_at, status)
 values (
   '11111111-1111-1111-1111-111111111111',
-  'Chasse Urbaine — Poitiers',
+  'Évasion Urbaine — Poitiers',
   '2026-10-28 20:00:00+01',
   '2026-10-28 22:00:00+01',
   'scheduled'
