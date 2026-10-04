@@ -217,7 +217,7 @@
     const remaining = new Date(eventState.actual_ends_at).getTime() - Date.now();
     if (remaining <= 0) {
       main.textContent = "00:00:00";
-      sub.textContent = "Fin de partie · Ping 12 final encore disponible pendant 60 secondes.";
+      sub.textContent = "Fin de partie · Ping 13 final encore disponible pendant 60 secondes.";
       showFinishedBanner();
     } else {
       main.textContent = formatDuration(remaining);
@@ -649,6 +649,12 @@
       if (participant.role === "organizer") refreshPlayerManager();
     }
   }
+
+  window.addEventListener("evasion:event-updated", () => {
+    refreshEventState();
+    renderGlobalTimer();
+    renderHunterDepartureTimer();
+  });
 
   setInterval(setup,1000);
   setInterval(() => { renderGlobalTimer(); renderHunterDepartureTimer(); },1000);
