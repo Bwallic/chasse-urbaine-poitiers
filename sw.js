@@ -9,13 +9,13 @@ self.addEventListener("push", (event) => {
   try {
     payload = event.data ? event.data.json() : {};
   } catch {
-    payload = { title: "Chasse Urbaine", body: event.data?.text?.() || "Nouveau ping" };
+    payload = { title: "Évasion Urbaine", body: event.data?.text?.() || "Nouveau ping" };
   }
 
-  const title = payload.title || "Chasse Urbaine — Poitiers";
+  const title = payload.title || "Évasion Urbaine — Poitiers";
   const options = {
     body: payload.body || "Nouveau ping",
-    tag: payload.tag || "chasse-urbaine-ping",
+    tag: payload.tag || "evasion-urbaine-ping",
     renotify: true,
     data: payload,
   };
