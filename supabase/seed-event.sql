@@ -25,7 +25,8 @@ insert into public.zones (event_id, zone_key, name, zone_type, sort_order) value
 on conflict (event_id, zone_key) do update set name=excluded.name, zone_type=excluded.zone_type, sort_order=excluded.sort_order;
 
 insert into public.ping_slots (event_id, label, scheduled_at, ordinal) values
-('11111111-1111-1111-1111-111111111111','20:30','2026-10-28 20:30:00+01',1),
-('11111111-1111-1111-1111-111111111111','21:00','2026-10-28 21:00:00+01',2),
-('11111111-1111-1111-1111-111111111111','21:30','2026-10-28 21:30:00+01',3)
+('11111111-1111-1111-1111-111111111111','Ping 0','2026-10-28 20:00:00+01',0),
+('11111111-1111-1111-1111-111111111111','Ping 1','2026-10-28 20:20:00+01',1),
+('11111111-1111-1111-1111-111111111111','Ping 2','2026-10-28 20:40:00+01',2),
+('11111111-1111-1111-1111-111111111111','Ping 3','2026-10-28 21:00:00+01',3)
 on conflict (event_id, ordinal) do update set label=excluded.label, scheduled_at=excluded.scheduled_at;
