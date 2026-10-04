@@ -9,7 +9,7 @@ Prototype V1 de l'application web mobile pour l'événement du 28 octobre 2026.
 - Trois rôles : Cible, Chasseur, Organisateur.
 - Cible : envoi volontaire d'un ping GPS, associé au pseudo, et affichage des derniers pings des Cibles.
 - Chasseur : affichage centralisé du dernier ping connu de chaque Cible.
-- Organisateur : matrice de contrôle de Ping 0 puis des pings à +20 / +40 / +60 minutes et tirage aléatoire de la zone d'extraction.
+- Organisateur : matrice de contrôle de Ping 0 puis des pings toutes les 20 minutes jusqu’à +120 minutes et tirage aléatoire de la zone d'extraction.
 - Conservation de l'historique des pings côté Supabase.
 - Heure du ping calculée côté serveur dans la version connectée.
 - Contrôle automatique de la fenêtre ±60 secondes.
@@ -24,7 +24,7 @@ Prototype V1 de l'application web mobile pour l'événement du 28 octobre 2026.
 - `data/areas.geojson` : géométries exactes extraites du KMZ.
 - `config.js` : configuration du site.
 - `supabase/schema.sql` : tables, RLS et fonctions serveur.
-- `supabase/seed-event.sql` : événement, zones et 3 créneaux de ping.
+- `supabase/seed-event.sql` : événement, zones et 7 créneaux de ping (Ping 0 à Ping 6).
 - `supabase/seed-participants-example.sql` : exemple de création de participants et codes.
 - `scripts/kmz_to_geojson.py` : conversion/reconstruction des zones depuis un KMZ.
 
@@ -72,7 +72,7 @@ Les vrais codes doivent rester dans Supabase. Ne pas committer un fichier conten
 
 ## Logique des pings
 
-La base utilise un Ping 0 au START, puis Ping 1 à +20 minutes, Ping 2 à +40 minutes et Ping 3 à +60 minutes. `sent_at` vient de l'horloge du serveur. Un ping est valide si son écart au créneau est inférieur ou égal à 60 secondes. Les pings hors fenêtre sont conservés et signalés à l'organisateur.
+La base utilise un Ping 0 au START, puis un ping toutes les 20 minutes pendant les deux heures du jeu : Ping 1 à +20, Ping 2 à +40, Ping 3 à +60, Ping 4 à +80, Ping 5 à +100 et Ping 6 à +120 minutes. `sent_at` vient de l'horloge du serveur. Un ping est valide si son écart au créneau est inférieur ou égal à 60 secondes. Les pings hors fenêtre sont conservés et signalés à l'organisateur.
 
 ## Zone d'extraction
 
