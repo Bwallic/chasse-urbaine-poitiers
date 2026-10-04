@@ -31,6 +31,8 @@ create table if not exists public.participants (
   team text,
   user_id uuid unique references auth.users(id) on delete set null,
   active boolean not null default true,
+  play_state text not null default 'free' check (play_state in ('free','capturing','prisoner')),
+  play_state_updated_at timestamptz,
   created_at timestamptz not null default now(),
   unique(event_id, pseudo)
 );
