@@ -163,7 +163,7 @@
         <button id="resetExtractionBtn" class="ghost">RESET ZONE D'EXTRACTION</button>
         <button id="resetPartyBtn" class="ghost">RESET PARTIE</button>
       </div>
-      <p class="muted compact">START enregistre l'heure réelle du départ et recale les pings à +30 / +60 / +90 minutes. RESET START remet seulement le départ à zéro. RESET PARTIE efface les pings de test, la zone active et le départ, mais conserve les participants, leurs pseudos et leurs codes.</p>
+      <p class="muted compact">START enregistre l'heure réelle du départ et recale les pings à +20 / +40 / +60 minutes. RESET START remet seulement le départ à zéro. RESET PARTIE efface les pings de test, la zone active et le départ, mais conserve les participants, leurs pseudos et leurs codes.</p>
     `;
 
     const firstDivider = panel.querySelector(".divider");
