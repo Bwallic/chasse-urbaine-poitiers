@@ -5,6 +5,7 @@
   let participant = null;
   let statusRow = null;
   let busy = false;
+  let initialized = false;
   const layers = new Map();
 
   const style = document.createElement("style");
@@ -191,12 +192,26 @@
     if (!participant || !game || game.classList.contains("hidden")) return;
 
     if (participant.role === "hunter") injectHunterControl();
-    refreshVisiblePings();
-    if (participant.role === "hunter") refreshStatus();
+
+    if (!initialized) {
+      initialized = true;
+      refreshVisiblePings();
+      if (participant.role === "hunter") refreshStatus();
+    }
   }
+
+  function refreshVisibleState() {
+    if (document.hidden) return;
+    refreshVisiblePings();
+    if (participant?.role === "hunter") refreshStatus();
+  }
+
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) refreshVisibleState();
+  });
+  window.addEventListener("focus", refreshVisibleState);
 
   setInterval(setup, 1000);
   setInterval(renderStatus, 1000);
-  setInterval(refreshVisiblePings, 5000);
-  setInterval(refreshStatus, 5000);
+  setInterval(refreshVisibleState, 5000);
 })();
