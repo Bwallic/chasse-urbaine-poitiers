@@ -506,6 +506,9 @@
     if (!targetCountdownTriggered) {
       targetCountdownTriggered = true;
       document.querySelector('[data-target-state="free"]')?.click();
+      setTimeout(() => {
+        if (targetStateSnapshot?.play_state === "capturing") targetCountdownTriggered = false;
+      }, 5000);
     }
   }
 
