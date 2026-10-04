@@ -1,4 +1,4 @@
-# Chasse Urbaine — Poitiers
+# Évasion Urbaine — Poitiers
 
 Prototype V1 de l'application web mobile pour l'événement du 28 octobre 2026.
 
@@ -7,7 +7,7 @@ Prototype V1 de l'application web mobile pour l'événement du 28 octobre 2026.
 - Carte commune Leaflet avec fond sombre OpenStreetMap/CARTO.
 - Périmètre, prison et 5 zones d'extraction importés depuis le KMZ Google Earth fourni.
 - Trois rôles : Cible, Chasseur, Organisateur.
-- Cible : envoi volontaire d'un ping GPS, associé au pseudo, et affichage des derniers pings des Cibles.
+- Cible : envoi automatique du ping GPS lorsque l'application est visible au créneau prévu, avec notification/clic ou bouton manuel en secours.
 - Chasseur : affichage centralisé du dernier ping connu de chaque Cible.
 - Organisateur : matrice de contrôle de Ping 0 puis des pings toutes les 20 minutes jusqu’à +120 minutes et tirage aléatoire de la zone d'extraction.
 - Conservation de l'historique des pings côté Supabase.
@@ -57,7 +57,7 @@ L'anon key Supabase peut être présente dans une application web publique : la 
 
 Le front-end est statique et peut être publicé directement avec GitHub Pages.
 
-1. Créer un dépôt, par lexemple `chasse-urbaine-poitiers`.
+1. Créer un dépôt, par lexemple `evasion-urbaine-poitiers`.
 2. Ajouter le contenu de ce dossier à la branche `main`.
 3. Dans les paramètres du dépôt, activer Pages à partir de la branche `main` / racine du dépôt.
 4. Utiliser l'URL HTTPS fournie par GitHub Pages.
