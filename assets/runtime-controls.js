@@ -163,7 +163,7 @@
         <button id="resetExtractionBtn" class="ghost">RESET ZONE D'EXTRACTION</button>
         <button id="resetPartyBtn" class="ghost">RESET PARTIE</button>
       </div>
-      <p class="muted compact">START enregistre l'heure réelle du départ. Départ des Chasseurs à +10 min. Pings : START/Ping 0, puis +30 / +40 / +50 / +60 / +75 / +90 / +95 / +100 / +105 / +110 / +115 / +120 min. RESET START remet seulement le départ à zéro. RESET PARTIE efface les pings de test, la zone active et le départ, mais conserve les participants, leurs pseudos et leurs codes.</p>
+      <p class="muted compact">START enregistre l'heure réelle du départ. Départ des Chasseurs à +10 min. Pings Cibles : START/Ping 0, puis +20 / +30 / +40 / +50 / +60 / +75 / +90 / +95 / +100 / +105 / +110 / +115 / +120 min. RESET START remet seulement le départ à zéro. RESET PARTIE efface les pings de test, la zone active et le départ, mais conserve les participants, leurs pseudos et leurs codes.</p>
     `;
 
     const firstDivider = panel.querySelector(".divider");
@@ -171,7 +171,7 @@
     else panel.appendChild(block);
 
     document.getElementById("startEventBtn").addEventListener("click", async () => {
-      if (!confirm("Démarrer la partie maintenant ? Ping 0 part immédiatement, les Chasseurs partent à +10 min, puis les pings suivent le nouveau planning jusqu'à +120 min.")) return;
+      if (!confirm("Démarrer la partie maintenant ? Ping 0 part immédiatement, les Chasseurs partent à +10 min, puis les pings Cibles suivent le planning +20 à +120 min.")) return;
       const client = window.CHASSE_LIVE_CLIENT;
       if (!client) return alert("Connexion Supabase indisponible.");
 
@@ -429,6 +429,12 @@
       sub.textContent = `Fenêtre du ${hunterTiming.slot_label} en cours.`;
     }
   }
+
+  window.addEventListener("evasion:event-updated", () => {
+    refreshRuntimeStatus();
+    refreshTargetTiming();
+    refreshHunterTiming();
+  });
 
   preparePseudoField();
   injectOrganizerControls();
