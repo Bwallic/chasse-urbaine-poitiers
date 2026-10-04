@@ -16,20 +16,29 @@ on conflict (id) do update set
 
 insert into public.zones (event_id, zone_key, name, zone_type, sort_order) values
 ('11111111-1111-1111-1111-111111111111','play-area','Périmètre de jeu','perimeter',0),
-('11111111-1111-1111-1111-111111111111','extraction-1','France 3','extraction',1),
-('11111111-1111-1111-1111-111111111111','extraction-2','Triangle d''or','extraction',2),
-('11111111-1111-1111-1111-111111111111','extraction-3','Parc de la Cassette','extraction',3),
-('11111111-1111-1111-1111-111111111111','extraction-4','Parking de la gare','extraction',4),
-('11111111-1111-1111-1111-111111111111','extraction-5','Parc des Troènes','extraction',5),
-('11111111-1111-1111-1111-111111111111','prison','Prison — Place de la Liberté','prison',10)
-on conflict (event_id, zone_key) do update set name=excluded.name, zone_type=excluded.zone_type, sort_order=excluded.sort_order;
+('11111111-1111-1111-1111-111111111111','extraction-1','Extraction 1 - Eglise','extraction',1),
+('11111111-1111-1111-1111-111111111111','extraction-2','Extraction 2 - Ilot Tison','extraction',2),
+('11111111-1111-1111-1111-111111111111','extraction-3','Extraction 3 - Dernier étage Parking de la gare','extraction',3),
+('11111111-1111-1111-1111-111111111111','extraction-4','Extraction 4 - Pont Neuf','extraction',4),
+('11111111-1111-1111-1111-111111111111','extraction-5','Extraction 5 - Anneaux Palais de justice','extraction',5),
+('11111111-1111-1111-1111-111111111111','extraction-6','Extraction 6 - Cité Marie Curie','extraction',6),
+('11111111-1111-1111-1111-111111111111','prison','Prison','prison',10)
+on conflict (event_id, zone_key) do update
+set name=excluded.name, zone_type=excluded.zone_type, sort_order=excluded.sort_order;
 
 insert into public.ping_slots (event_id, label, scheduled_at, ordinal) values
 ('11111111-1111-1111-1111-111111111111','Ping 0','2026-10-28 20:00:00+01',0),
-('11111111-1111-1111-1111-111111111111','Ping 1','2026-10-28 20:20:00+01',1),
+('11111111-1111-1111-1111-111111111111','Ping 1','2026-10-28 20:30:00+01',1),
 ('11111111-1111-1111-1111-111111111111','Ping 2','2026-10-28 20:40:00+01',2),
-('11111111-1111-1111-1111-111111111111','Ping 3','2026-10-28 21:00:00+01',3),
-('11111111-1111-1111-1111-111111111111','Ping 4','2026-10-28 21:20:00+01',4),
-('11111111-1111-1111-1111-111111111111','Ping 5','2026-10-28 21:40:00+01',5),
-('11111111-1111-1111-1111-111111111111','Ping 6','2026-10-28 22:00:00+01',6)
-on conflict (event_id, ordinal) do update set label=excluded.label, scheduled_at=excluded.scheduled_at;
+('11111111-1111-1111-1111-111111111111','Ping 3','2026-10-28 20:50:00+01',3),
+('11111111-1111-1111-1111-111111111111','Ping 4','2026-10-28 21:00:00+01',4),
+('11111111-1111-1111-1111-111111111111','Ping 5','2026-10-28 21:15:00+01',5),
+('11111111-1111-1111-1111-111111111111','Ping 6','2026-10-28 21:30:00+01',6),
+('11111111-1111-1111-1111-111111111111','Ping 7','2026-10-28 21:35:00+01',7),
+('11111111-1111-1111-1111-111111111111','Ping 8','2026-10-28 21:40:00+01',8),
+('11111111-1111-1111-1111-111111111111','Ping 9','2026-10-28 21:45:00+01',9),
+('11111111-1111-1111-1111-111111111111','Ping 10','2026-10-28 21:50:00+01',10),
+('11111111-1111-1111-1111-111111111111','Ping 11','2026-10-28 21:55:00+01',11),
+('11111111-1111-1111-1111-111111111111','Ping 12','2026-10-28 22:00:00+01',12)
+on conflict (event_id, ordinal) do update
+set label=excluded.label, scheduled_at=excluded.scheduled_at;
