@@ -374,7 +374,10 @@
       .on("postgres_changes", { event: "*", schema: "public", table: "pings", filter: `event_id=eq.${cfg.EVENT_ID}` }, () => refreshAll())
       .subscribe();
     const eventChannel = state.supabase.channel(`event-status-${cfg.EVENT_ID}`)
-      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "events", filter: `id=eq.${cfg.EVENT_ID}` }, () => refreshAll())
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "events", filter: `id=eq.${cfg.EVENT_ID}` }, async (payload) => {
+        await refreshAll();
+        window.dispatchEvent(new CustomEvent("evasion:event-updated", { detail: payload?.new || null }));
+      })
       .subscribe();
     state.realtime = [pingsChannel, eventChannel];
   }
