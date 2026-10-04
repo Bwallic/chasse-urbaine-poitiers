@@ -1,6 +1,6 @@
 -- Évasion Urbaine — planning des pings irrégulier.
 -- START = Ping 0, départ chasseurs à +10 min.
--- Pings suivants : +30, +40, +50, +60, +75, +90, +95, +100, +105, +110, +115, +120.
+-- Pings suivants : +20, +30, +40, +50, +60, +75, +90, +95, +100, +105, +110, +115, +120.
 
 create or replace function public.ping_offset_minutes(p_ordinal integer)
 returns integer
@@ -9,18 +9,19 @@ immutable
 as $function$
   select case p_ordinal
     when 0 then 0
-    when 1 then 30
-    when 2 then 40
-    when 3 then 50
-    when 4 then 60
-    when 5 then 75
-    when 6 then 90
-    when 7 then 95
-    when 8 then 100
-    when 9 then 105
-    when 10 then 110
-    when 11 then 115
-    when 12 then 120
+    when 1 then 20
+    when 2 then 30
+    when 3 then 40
+    when 4 then 50
+    when 5 then 60
+    when 6 then 75
+    when 7 then 90
+    when 8 then 95
+    when 9 then 100
+    when 10 then 105
+    when 11 then 110
+    when 12 then 115
+    when 13 then 120
     else null
   end
 $function$;
@@ -33,8 +34,8 @@ select
   v.ordinal
 from public.events e
 cross join (values
-  (0,0),(1,30),(2,40),(3,50),(4,60),(5,75),(6,90),
-  (7,95),(8,100),(9,105),(10,110),(11,115),(12,120)
+  (0,0),(1,20),(2,30),(3,40),(4,50),(5,60),(6,75),(7,90),
+  (8,95),(9,100),(10,105),(11,110),(12,115),(13,120)
 ) as v(ordinal,offset_min)
 where e.id='11111111-1111-1111-1111-111111111111'::uuid
 on conflict (event_id,ordinal) do update
@@ -68,7 +69,7 @@ begin
   update public.ping_slots s
      set scheduled_at=v_now + make_interval(mins => public.ping_offset_minutes(s.ordinal)),
          label='Ping ' || s.ordinal::text
-   where s.event_id=v_event_id and s.ordinal between 0 and 12;
+   where s.event_id=v_event_id and s.ordinal between 0 and 13;
 
   update public.events e
      set actual_started_at=v_now,
@@ -82,7 +83,7 @@ begin
   insert into public.push_jobs(event_id,slot_id,scheduled_at)
   select s.event_id,s.id,s.scheduled_at
   from public.ping_slots s
-  where s.event_id=v_event_id and s.ordinal between 0 and 12
+  where s.event_id=v_event_id and s.ordinal between 0 and 13
   order by s.ordinal;
 
   perform public.dispatch_due_push_jobs();
