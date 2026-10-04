@@ -10,6 +10,7 @@
   let stateRefreshBusy = false;
   let managerRefreshBusy = false;
   let initialSetupDone = false;
+  const hunterPingLayers = new Map();
 
   const style = document.createElement("style");
   style.textContent = `
@@ -53,6 +54,23 @@
     .self-position-dot {
       width: 18px; height: 18px; border-radius: 50%; background: #58a6ff;
       border: 3px solid #fff; box-shadow: 0 0 0 5px rgba(88,166,255,.22);
+    }
+    .hunter-ping-dot {
+      width: 20px; height: 20px; border-radius: 50%;
+      background: #ff3b3b; border: 3px solid #fff;
+      box-shadow: 0 0 0 5px rgba(255,59,59,.22);
+    }
+    .hunter-ping-control {
+      margin: 10px 0 14px;
+      padding: 12px;
+      border: 1px solid rgba(255,59,59,.35);
+      border-radius: 10px;
+      background: rgba(255,59,59,.06);
+    }
+    .hunter-ping-control .hunter-ping-button {
+      width: 100%;
+      margin-top: 8px;
+      border-color: rgba(255,59,59,.55);
     }
     .organizer-player-manager .manager-form,
     .organizer-player-manager .player-editor { display: grid; gap: 8px; }
@@ -236,7 +254,7 @@
             iconSize:[18,18], iconAnchor:[9,9]
           });
           selfMarker = L.marker(latlng,{icon,zIndexOffset:1500})
-            .bindTooltip("Vous êtes ici",{direction:"top",className:"map-label"}).addTo(map);
+            .bindTooltip(participant.role === "hunter" ? "Votre position GPS" : "Vous êtes ici",{direction:"top",className:"map-label"}).addTo(map);
           selfAccuracy = L.circle(latlng,{
             radius:Math.max(5,pos.coords.accuracy||5),weight:1,fillOpacity:.05
           }).addTo(map);
@@ -249,6 +267,108 @@
       () => {},
       {enableHighAccuracy:true,maximumAge:5000,timeout:15000}
     );
+  }
+
+
+  function injectHunterPingControl() {
+    const panel = document.getElementById("hunterPanel");
+    if (!panel || document.getElementById("hunterPingControl")) return;
+
+    const box = document.createElement("div");
+    box.id = "hunterPingControl";
+    box.className = "hunter-ping-control";
+    box.innerHTML =
+      '<span class="eyebrow">PING CHASSEUR</span>' +
+      '<div class="big-status">Partager ma position aux Chasseurs</div>' +
+      '<button id="sendHunterPingBtn" class="ghost hunter-ping-button">ENVOYER UN PING ROUGE</button>' +
+      '<small id="hunterPingMessage" class="muted">À volonté après le départ des Chasseurs. Visible uniquement par les Chasseurs.</small>';
+
+    const anchor = panel.querySelector(".divider") || panel.firstElementChild;
+    if (anchor) panel.insertBefore(box, anchor);
+    else panel.appendChild(box);
+
+    document.getElementById("sendHunterPingBtn")?.addEventListener("click", sendHunterPing);
+  }
+
+  async function sendHunterPing() {
+    const btn = document.getElementById("sendHunterPingBtn");
+    const message = document.getElementById("hunterPingMessage");
+    if (!btn || !message || !client()) return;
+
+    btn.disabled = true;
+    message.textContent = "Localisation GPS en cours…";
+
+    try {
+      const pos = await new Promise((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          enableHighAccuracy: true,
+          timeout: 15000,
+          maximumAge: 0
+        });
+      });
+
+      const { latitude, longitude, accuracy } = pos.coords;
+      const { data, error } = await client().rpc("submit_hunter_ping", {
+        p_lat: latitude,
+        p_lng: longitude,
+        p_accuracy_m: accuracy
+      });
+      if (error) throw error;
+
+      const row = Array.isArray(data) ? data[0] : data;
+      const time = row?.sent_at ? new Date(row.sent_at) : new Date();
+      message.textContent = "Ping rouge envoyé à " + time.toLocaleTimeString("fr-FR", {hour:"2-digit",minute:"2-digit",second:"2-digit"}) + ".";
+      await refreshHunterPings();
+    } catch (e) {
+      message.textContent = e.message || "Impossible d'envoyer le ping.";
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  async function refreshHunterPings() {
+    if (!participant || participant.role !== "hunter" || !client()) return;
+    const map = window.CHASSE_MAP;
+    if (!map || !window.L) return;
+
+    const { data, error } = await client().rpc("visible_hunter_pings");
+    if (error) return;
+
+    const rows = data || [];
+    const seen = new Set();
+
+    rows.forEach((row) => {
+      seen.add(row.participant_id);
+      const latlng = [row.lat, row.lng];
+      let layer = hunterPingLayers.get(row.participant_id);
+
+      if (!layer) {
+        const icon = L.divIcon({
+          className: "",
+          html: '<div class="hunter-ping-dot"></div>',
+          iconSize: [20,20],
+          iconAnchor: [10,10]
+        });
+        layer = L.marker(latlng,{icon,zIndexOffset:1400}).addTo(map);
+        hunterPingLayers.set(row.participant_id, layer);
+      } else {
+        layer.setLatLng(latlng);
+      }
+
+      const ageSeconds = Math.max(0, Math.round((Date.now() - new Date(row.sent_at).getTime()) / 1000));
+      const age = ageSeconds < 60 ? ageSeconds + " s" : Math.floor(ageSeconds / 60) + " min";
+      layer.bindTooltip(row.pseudo + " · ping chasseur · " + age, {
+        direction:"top",
+        className:"map-label"
+      });
+    });
+
+    hunterPingLayers.forEach((layer, participantId) => {
+      if (!seen.has(participantId)) {
+        layer.remove();
+        hunterPingLayers.delete(participantId);
+      }
+    });
   }
 
   function injectTargetState() {
@@ -504,6 +624,7 @@
     } else if (participant.role === "hunter") {
       injectTimer("hunterPanel","hunter");
       injectHunterDepartureTimer();
+      injectHunterPingControl();
       injectVisibleTargetStates("hunterPanel","hunter");
       startOwnPosition();
     } else if (participant.role === "organizer") {
@@ -515,6 +636,7 @@
       refreshEventState();
       if (participant.role === "target") refreshTargetState();
       if (["target","hunter"].includes(participant.role)) refreshVisibleTargetStates();
+      if (participant.role === "hunter") refreshHunterPings();
       if (participant.role === "organizer") refreshPlayerManager();
     }
   }
@@ -525,6 +647,7 @@
   setInterval(() => {
     if (participant?.role === "target") refreshTargetState();
     if (["target","hunter"].includes(participant?.role)) refreshVisibleTargetStates();
+    if (participant?.role === "hunter") refreshHunterPings();
     if (participant?.role === "organizer") refreshPlayerManager();
   },5000);
 })();
