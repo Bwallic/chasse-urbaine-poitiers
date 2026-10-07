@@ -5,21 +5,21 @@ Prototype V1 de l'application web mobile pour l'événement du 28 octobre 2026.
 ## Fonctionnalités présentes
 
 - Carte commune Leaflet avec fond sombre OpenStreetMap/CARTO.
-- Périmètre, prison et 5 zones d'extraction importés depuis le KMZ Google Earth fourni.
+- Périmètre, prison et 6 zones d'extraction importés depuis le KMZ Google Earth fourni.
 - Trois rôles : Cible, Chasseur, Organisateur.
 - Cible : envoi automatique du ping GPS lorsque l'application est visible au créneau prévu, avec notification/clic ou bouton manuel en secours.
 - Chasseur : affichage centralisé du dernier ping connu de chaque Cible.
-- Organisateur : matrice de contrôle de Ping 0 puis des pings toutes les 20 minutes jusqu’à +120 minutes et tirage aléatoire de la zone d'extraction.
+- Organisateur : matrice de contrôle des pings, gestion des joueurs et suivi du tirage automatique de la zone d'extraction à START +80 minutes.
 - Conservation de l'historique des pings côté Supabase.
 - Heure du ping calculée côté serveur dans la version connectée.
 - Contrôle automatique de la fenêtre ±60 secondes.
 - Realtime Supabase pour actualiser les pings et la zone active sur les autres téléphones.
 - Mode démo local pour tester l'interface sans backend.
 - Position personnelle en temps réel sur la carte pour Cibles et Chasseurs, uniquement en local sur leur appareil.
-- Timer général jusqu'à la fin de partie et fin automatique après les 2 heures, avec une courte grâce technique pour le Ping 6 final.
+- Timer général jusqu'à la fin de partie et fin automatique après les 2 heures, avec une courte grâce technique pour le Ping 13 final.
 - États Cible : libre, en cours de capture, en prison, puis libérée.
 - Gestion des joueurs directement depuis l'espace Organisateur : ajout, modification, rôle, activation, code et libération d'appareil.
-- Notification push à tous les joueurs lors du tirage de la zone d'extraction, avec le nom de la zone.
+- Révélation automatique de la zone d'extraction à START +80 minutes, avec notification push indiquant le nom de la zone.
 - Interface joueur allégée pendant la partie.
 
 ## Structure
@@ -78,11 +78,11 @@ Les vrais codes doivent rester dans Supabase. Ne pas committer un fichier conten
 
 ## Logique des pings
 
-La base utilise un Ping 0 au START, puis un ping toutes les 20 minutes pendant les deux heures du jeu : Ping 1 à +20, Ping 2 à +40, Ping 3 à +60, Ping 4 à +80, Ping 5 à +100 et Ping 6 à +120 minutes. `sent_at` vient de l'horloge du serveur. Un ping est valide si son écart au créneau est inférieur ou égal à 60 secondes. Les pings hors fenêtre sont conservés et signalés à l'organisateur.
+La base utilise un Ping 0 au START, puis les pings Cibles à +20, +30, +40, +50, +60, +75, +90, +95, +100, +105, +110, +115 et +120 minutes. `sent_at` vient de l'horloge du serveur. Un ping est valide si son écart au créneau est inférieur ou égal à 60 secondes. Les pings hors fenêtre sont conservés et signalés à l'organisateur.
 
 ## Zone d'extraction
 
-Les cinq zones sont visibles dès le départ. L'organisateur utilise « Tirer la zone » au moment prévu par les règles de la partie. Le serveur choisit aléatoirement une zone et la conserve : un second clic renvoie la même zone au lieu d'en tirer une nouvelle.
+Les six zones potentielles sont visibles dès le départ. À START +80 minutes, soit 40 minutes avant la fin, le serveur choisit automatiquement et aléatoirement une zone, l'active pour tous les joueurs et envoie la notification correspondante. Le bouton Organisateur reste disponible comme solution de secours une fois l'échéance atteinte si la révélation automatique n'a pas encore été enregistrée.
 
 ## Plan B recommandé
 
