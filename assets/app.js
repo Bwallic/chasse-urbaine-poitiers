@@ -305,10 +305,72 @@
     $("adminMatrix").innerHTML = `<table><thead><tr><th>Cible</th>${slots.map((s) => `<th>${escapeHtml(s.label)}</th>`).join("")}</tr></thead><tbody>${rows || `<tr><td colspan="${slots.length + 1}" class="missing">Aucune Cible enregistrée.</td></tr>`}</tbody></table>`;
   }
 
+  function formatCountdown(ms) {
+    const total = Math.max(0, Math.ceil(ms / 1000));
+    const h = Math.floor(total / 3600);
+    const m = Math.floor((total % 3600) / 60);
+    const s = total % 60;
+    return h > 0
+      ? `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`
+      : `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+  }
+
+  function renderExtractionControl() {
+    const btn = $("drawZoneBtn");
+    const info = $("extractionScheduleText");
+    if (!btn || !info || state.participant?.role !== "organizer") return;
+
+    const offsetMinutes = Number(cfg.EXTRACTION_REVEAL_OFFSET_MINUTES || 80);
+
+    if (state.activeExtractionKey) {
+      btn.disabled = true;
+      btn.textContent = "ZONE RÉVÉLÉE";
+      info.textContent = "La zone d'extraction active est maintenant visible par tous les joueurs.";
+      return;
+    }
+
+    if (!isLive()) {
+      btn.disabled = false;
+      btn.textContent = "TIRER LA ZONE";
+      info.textContent = `Mode démo : tirage manuel. En partie réelle, révélation automatique à START +${offsetMinutes} min.`;
+      return;
+    }
+
+    const event = window.CHASSE_EVENT_STATE;
+    if (!event?.actual_started_at || event.status === "scheduled") {
+      btn.disabled = true;
+      btn.textContent = `AUTO À +${offsetMinutes}`;
+      info.textContent = `Révélation automatique à START +${offsetMinutes} min, soit 40 minutes avant la fin.`;
+      return;
+    }
+
+    if (event.status === "finished") {
+      btn.disabled = true;
+      btn.textContent = "PARTIE TERMINÉE";
+      info.textContent = "La partie est terminée.";
+      return;
+    }
+
+    const revealAt = new Date(event.actual_started_at).getTime() + offsetMinutes * 60 * 1000;
+    const diff = revealAt - Date.now();
+
+    if (diff > 0) {
+      btn.disabled = true;
+      btn.textContent = `AUTO À +${offsetMinutes}`;
+      info.textContent = `Révélation automatique à ${formatClock(revealAt)} · dans ${formatCountdown(diff)}.`;
+      return;
+    }
+
+    btn.disabled = false;
+    btn.textContent = "TIRER MAINTENANT";
+    info.textContent = "Le tirage automatique est arrivé à échéance. Ce bouton reste disponible comme solution de secours jusqu'à la révélation.";
+  }
+
   function renderActiveZone() {
     const ft = state.areaData?.features.find((f) => f.properties.id === state.activeExtractionKey);
     $("activeZoneLabel").textContent = ft ? ft.properties.name : "Aucune zone active";
     if (state.areaLayer) state.areaLayer.setStyle(areaStyle);
+    renderExtractionControl();
   }
 
   async function sendPing() {
@@ -365,7 +427,7 @@
     } catch (e) {
       alert(e.message || "Impossible d'effectuer le tirage.");
     } finally {
-      btn.disabled = false;
+      renderExtractionControl();
     }
   }
 
@@ -434,4 +496,5 @@
   }
 
   boot();
+  setInterval(renderExtractionControl, 1000);
 })();
