@@ -104,9 +104,9 @@
               <span class="eyebrow">EXTRACTION</span>
               <div id="activeZoneLabel" class="big-status">Aucune zone active</div>
             </div>
-            <button id="drawZoneBtn" class="primary small">Tirer la zone</button>
+            <button id="drawZoneBtn" class="primary small" disabled>AUTO À +80</button>
           </div>
-          <p class="muted compact">Le tirage est aléatoire et, en mode connecté, enregistré pour tous les joueurs.</p>
+          <p id="extractionScheduleText" class="muted compact">Révélation automatique à START +80 min, soit 40 minutes avant la fin.</p>
         </section>
       </section>
     </main>
@@ -119,7 +119,7 @@
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="config.js?v=20261004c"></script>
+  <script src="config.js?v=20261007a"></script>
   <script src="assets/map-provider.js"></script>
   <script src="assets/runtime-controls.js?v=20261004c"></script>
   <script src="assets/access-reset.js"></script>
@@ -128,7 +128,7 @@
   <script src="assets/auto-reconnect.js"></script>
   <script src="assets/notifications.js?v=20261004f"></script>
   <script src="assets/auto-ping-visible.js?v=20261004f"></script>
-  <script src="assets/app.js?v=20261004f"></script>
+  <script src="assets/app.js?v=20261007a"></script>
   <script src="assets/game-upgrades.js?v=20261004g"></script>
   <script src="assets/hunter-required-ping.js?v=20261004f"></script>
 </body>
